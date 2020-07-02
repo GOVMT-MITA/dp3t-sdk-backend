@@ -22,7 +22,7 @@ RUN mkdir -p /home/ws/bin && \
     mkdir -p /home/ws/tmp
 
 # Copy binary
-COPY ./ws/bin/dpppt-backend-sdk-ws-1.0.0.jar /home/ws/bin/dpppt-backend-sdk-ws.jar
+COPY ./ws/bin/dpppt-backend-sdk-ws.jar /home/ws/bin/dpppt-backend-sdk-ws.jar
 
 RUN chown -R ws:ws /home/ws
 

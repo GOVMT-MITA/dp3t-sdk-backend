@@ -9,13 +9,14 @@ BIBER = biber
 RUSTY_SWAGGER = rusty-swagger
 
 all: clean all1
-all1: clean updateproject updatedoc swagger la la2 la3 
+#all1: clean updateproject updatedoc swagger la la2 la3 
+all1: clean updateproject
 no: clean updateproject updatedoc swagger la la2 
 docker-build: updateproject docker
 doc: updatedoc swagger la la2 la3
 
 updateproject:
-	mvn -f dpppt-backend-sdk/pom.xml install
+	mvn -f dpppt-backend-sdk/pom.xml install -DskipTests
 
 updatedoc:
 	mvn -f dpppt-backend-sdk/pom.xml install -Dmaven.test.skip=true
@@ -37,8 +38,8 @@ show:
 	cd documentation; open $(FILE_NAME).pdf &
 
 docker:
-	cp dpppt-backend-sdk/dpppt-backend-sdk-ws/target/dpppt-backend-sdk-ws-1.0.0-SNAPSHOT.jar ws-sdk/ws/bin/dpppt-backend-sdk-ws-1.0.0.jar
-	docker build -t 979586646521.dkr.ecr.eu-west-1.amazonaws.com/ubiquevscovid19-ws:test ws-sdk/
+	cp dpppt-backend-sdk/dpppt-backend-sdk-ws/target/dpppt-backend-sdk-ws.jar ws-sdk/ws/bin/
+	docker build -t peppptdweacr.azurecr.io/dpppt-mt-ws:latest ws-sdk/
 	
 
 

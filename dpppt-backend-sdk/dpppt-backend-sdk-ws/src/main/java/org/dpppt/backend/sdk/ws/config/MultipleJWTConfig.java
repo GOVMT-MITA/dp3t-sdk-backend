@@ -20,6 +20,8 @@ import java.time.Duration;
 import org.apache.commons.io.IOUtils;
 import org.dpppt.backend.sdk.data.DPPPTDataService;
 import org.dpppt.backend.sdk.data.RedeemDataService;
+import org.dpppt.backend.sdk.ws.extmt.CovidCodeRedeemService;
+import org.dpppt.backend.sdk.ws.extmt.CovidCodeRedeemServiceImpl;
 import org.dpppt.backend.sdk.ws.security.DPPTJwtDecoder;
 import org.dpppt.backend.sdk.ws.security.JWTClaimSetConverter;
 import org.dpppt.backend.sdk.ws.security.JWTValidateRequest;
@@ -63,10 +65,14 @@ public class MultipleJWTConfig {
 		@Autowired
 		@Lazy
 		DPPPTDataService dataService;
-
+		
 		@Autowired
 		@Lazy
 		RedeemDataService redeemDataService;
+
+		@Autowired
+		@Lazy
+		CovidCodeRedeemService covidCodeRedeemService;
 
 		protected String loadPublicKey() throws IOException {
 			if (publicKey.startsWith("keycloak:")) {
@@ -78,7 +84,7 @@ public class MultipleJWTConfig {
 				in = new ClassPathResource(publicKey.substring(11)).getInputStream();
 				return readAsStringFromInputStreamAndClose(in);
 			} else if (publicKey.startsWith("file:/")) {
-				in = new FileInputStream(publicKey);
+				in = new FileInputStream(publicKey.substring(6));
 				return readAsStringFromInputStreamAndClose(in);
 			}
 			return publicKey;
@@ -119,7 +125,7 @@ public class MultipleJWTConfig {
 
 		@Bean
 		public JWTValidator jwtValidatorGAEN() {
-			return new JWTValidator(redeemDataService, Duration.ofDays(3));
+			return new JWTValidator(redeemDataService, covidCodeRedeemService, Duration.ofDays(3));
 		}
 
 		@Bean
@@ -164,7 +170,7 @@ public class MultipleJWTConfig {
 
 		@Bean
 		public JWTValidator jwtValidator() {
-			return new JWTValidator(redeemDataService, Duration.ofMinutes(maxValidityMinutes));
+			return new JWTValidator(redeemDataService, covidCodeRedeemService, Duration.ofMinutes(maxValidityMinutes));
 		}
 
 		@Bean

@@ -28,6 +28,8 @@ import org.dpppt.backend.sdk.data.gaen.GAENDataService;
 import org.dpppt.backend.sdk.data.gaen.JDBCGAENDataServiceImpl;
 import org.dpppt.backend.sdk.ws.controller.DPPPTController;
 import org.dpppt.backend.sdk.ws.controller.GaenController;
+import org.dpppt.backend.sdk.ws.extmt.CovidCodeRedeemServiceImpl;
+import org.dpppt.backend.sdk.ws.extmt.CovidCodeRedeemService;
 import org.dpppt.backend.sdk.ws.filter.ResponseWrapperFilter;
 import org.dpppt.backend.sdk.ws.interceptor.HeaderInjector;
 import org.dpppt.backend.sdk.ws.security.KeyVault;
@@ -110,7 +112,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	@Value("${ws.app.source}")
 	String appSource;
 
-	@Value("${ws.app.gaen.region:ch}")
+	@Value("${ws.app.gaen.region:mt}")
 	String gaenRegion;
 
 	@Value("${ws.app.gaen.key_size: 16}")
@@ -124,7 +126,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	String packageName;
 	@Value("${ws.app.gaen.keyVersion:v1}")
 	String keyVersion;
-	@Value("${ws.app.gaen.keyIdentifier:228}")
+	@Value("${ws.app.gaen.keyIdentifier:278}")
 	String keyIdentifier;
 	@Value("${ws.app.gaen.algorithm:1.2.840.10045.4.3.2}")
 	String gaenAlgorithm;
@@ -185,6 +187,11 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 		}
 	}
 
+	@Bean
+	public CovidCodeRedeemService covidCodeRedeemService() {
+		return new CovidCodeRedeemServiceImpl();
+	}
+	
 	@Bean
 	public DPPPTController dppptSDKController() {
 		ValidateRequest theValidator = requestValidator;

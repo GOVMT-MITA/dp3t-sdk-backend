@@ -13,6 +13,8 @@ package org.dpppt.backend.sdk.ws.security;
 import java.time.Duration;
 
 import org.dpppt.backend.sdk.data.RedeemDataService;
+import org.dpppt.backend.sdk.ws.extmt.CovidCodeRedeemService;
+import org.dpppt.backend.sdk.ws.extmt.CovidCodeRedeemServiceImpl;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
@@ -25,11 +27,13 @@ public class JWTValidator implements OAuth2TokenValidator<Jwt> {
     public static final String UUID_CLAIM = "jti";
 
 
+    private CovidCodeRedeemService covidCodeRedeemService;
     private RedeemDataService dataService;
     private Duration maxJwtValidity;
 
-    public JWTValidator(RedeemDataService dataService, Duration maxJwtValidity) {
+    public JWTValidator(RedeemDataService dataService, CovidCodeRedeemService covidCodeRedeemService, Duration maxJwtValidity) {
         this.dataService = dataService;
+        this.covidCodeRedeemService = covidCodeRedeemService;
         this.maxJwtValidity = maxJwtValidity;
     }
 
@@ -43,7 +47,8 @@ public class JWTValidator implements OAuth2TokenValidator<Jwt> {
         if (token.getExpiresAt() == null || token.getIssuedAt().plus(maxJwtValidity).isBefore(token.getExpiresAt())) {
             return OAuth2TokenValidatorResult.failure(new OAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST));
         }
-        if(token.containsClaim(UUID_CLAIM) && this.dataService.checkAndInsertPublishUUID(token.getClaim(UUID_CLAIM))) {
+        if(token.containsClaim(UUID_CLAIM) && this.dataService.checkAndInsertPublishUUID(token.getClaim(UUID_CLAIM))
+        		&& covidCodeRedeemService.redeem(token.getSubject())) {
             return OAuth2TokenValidatorResult.success();
         }
         return OAuth2TokenValidatorResult.failure(new OAuth2Error(OAuth2ErrorCodes.INVALID_SCOPE));
