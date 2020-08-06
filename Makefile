@@ -7,6 +7,9 @@ FILE_NAME = documentation.tex
 LATEX = xelatex
 BIBER = biber
 RUSTY_SWAGGER = rusty-swagger
+DOCKER_REPO = peppptdweacr.azurecr.io
+IMAGE_TAG = latest
+TARGET_ENV = dev
 
 all: clean all1
 #all1: clean updateproject updatedoc swagger la la2 la3 
@@ -39,7 +42,7 @@ show:
 
 docker:
 	cp dpppt-backend-sdk/dpppt-backend-sdk-ws/target/dpppt-backend-sdk-ws.jar ws-sdk/ws/bin/
-	docker build -t peppptdweacr.azurecr.io/dpppt-mt-ws:latest ws-sdk/
+	docker build --build-arg targetenv=${TARGET_ENV} -t ${DOCKER_REPO}/dpppt-mt-ws:${IMAGE_TAG} ws-sdk/
 	
 
 
