@@ -28,6 +28,7 @@ import org.dpppt.backend.sdk.data.gaen.GAENDataService;
 import org.dpppt.backend.sdk.data.gaen.JDBCGAENDataServiceImpl;
 import org.dpppt.backend.sdk.ws.controller.DPPPTController;
 import org.dpppt.backend.sdk.ws.controller.GaenController;
+import org.dpppt.backend.sdk.ws.controller.HelloController;
 import org.dpppt.backend.sdk.ws.extmt.CovidCodeRedeemServiceImpl;
 import org.dpppt.backend.sdk.ws.extmt.CovidCodeRedeemService;
 import org.dpppt.backend.sdk.ws.filter.ResponseWrapperFilter;
@@ -208,6 +209,11 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	@Bean
 	public ValidationUtils gaenValidationUtils() {
 		return new ValidationUtils(gaenKeySizeBytes, Duration.ofDays(retentionDays), releaseBucketDuration);
+	}
+
+	@Bean
+	public HelloController helloController() {
+		return new HelloController();
 	}
 
 	@Bean
