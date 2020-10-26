@@ -12,42 +12,76 @@ package org.dpppt.backend.sdk.data.gaen;
 
 import java.time.Duration;
 import java.util.List;
-
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.utils.UTCInstant;
 
 public interface GAENDataService {
 
-	/**
-	 * Upserts (Update or Inserts) the given list of exposed keys
-	 * 
-	 * @param keys the list of exposed keys to upsert
-	 */
-	void upsertExposees(List<GaenKey> keys);
+  /**
+   * Upserts (Update or Inserts) the given key received from interops synchronization.
+   *
+   * @param key the exposed key to upsert
+   * @param now time of the sync
+   * @param origin the origin or the key
+   * @param visitedCountries the countries the key visited
+   */
+  void upsertExposeeFromInterops(
+      GaenKey key, UTCInstant now, String origin, List<String> visitedCountries);
 
-	/**
-	 * Returns the maximum id of the stored exposed entries for the given batch.
-	 * 
-	 * @param keyDate in milliseconds since Unix epoch (1970-01-01)
-	 * @param publishedAfter in milliseconds since Unix epoch
-	 * @param publishedUntil in milliseconds since Unix epoch
-	 * @return the maximum id of the stored exposed entries for the given batch
-	 */
-	int getMaxExposedIdForKeyDate(Long keyDate, Long publishedAfter, Long publishedUntil);
+  /**
+   * Upserts (Update or Inserts) the given list of exposed keys
+   *
+   * @param keys the list of exposed keys to upsert
+   * @param now time of the request
+   * @param international if set to true, the given keys are stored such that they have visited all
+   *     configured countries.
+   */
+  void upsertExposees(List<GaenKey> keys, UTCInstant now, boolean international);
 
-	/**
-	 * Returns all exposeed keys for the given batch.
-	 *
-	 * @param keyDate in milliseconds since Unix epoch (1970-01-01)
-	 * @param publishedAfter in milliseconds since Unix epoch
-	 * @param publishedUntil in milliseconds since Unix epoch
-	 * @return all exposeed keys for the given batch
-	 */
-	List<GaenKey> getSortedExposedForKeyDate(Long keyDate, Long publishedAfter, Long publishedUntil);
+  /**
+   * Upserts (Update or Inserts) the given list of exposed keys, with delayed release of same day
+   * TEKs
+   *
+   * @param keys the list of exposed keys to upsert
+   * @param delayedReceivedAt the timestamp to use for the delayed release (if null use now rounded
+   *     to next bucket)
+   * @param now time of the request
+   * @param international if set to true, the given keys are stored such that they have visited all
+   *     configured countries.
+   */
+  void upsertExposeesDelayed(
+      List<GaenKey> keys, UTCInstant delayedReceivedAt, UTCInstant now, boolean international);
 
-	/**
-	 * deletes entries older than retentionperiod
-	 * 
-	 * @param retentionPeriod in milliseconds
-	 */
-	void cleanDB(Duration retentionPeriod);
+  /**
+   * Returns all exposeed keys for the given batch, where a batch is parametrized with keyDate (for
+   * which day was the key used) publishedAfter/publishedUntil (when was the key published) and now
+   * (has the key expired or not, based on rollingStartNumber and rollingPeriod).
+   *
+   * @param keyDate must be midnight UTC
+   * @param publishedAfter when publication should start
+   * @param publishedUntil last publication
+   * @param now the start of the query
+   * @return all exposeed keys for the given batch
+   */
+  List<GaenKey> getSortedExposedForKeyDate(
+      UTCInstant keyDate, UTCInstant publishedAfter, UTCInstant publishedUntil, UTCInstant now);
+
+  /**
+   * deletes entries older than retentionperiod
+   *
+   * @param retentionPeriod in milliseconds
+   */
+  void cleanDB(Duration retentionPeriod);
+
+  /**
+   * Returns all exposed keys since keySince.
+   *
+   * @param keysSince
+   * @param now
+   * @param includeAllInternationalKeys If set to true, all international keys are returned in the
+   *     result. Otherwise only keys from the origin country.
+   * @return
+   */
+  List<GaenKey> getSortedExposedSince(
+      UTCInstant keysSince, UTCInstant now, boolean includeAllInternationalKeys);
 }
