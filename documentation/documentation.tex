@@ -55,14 +55,15 @@
 A test implementation is hosted on: https://demo.dpppt.org. 
 
 This part of the documentation deals with the different API-Endpoints. Examples to fields are put into the models section~\ref{sec:Models} to increase readability. Every request lists all possible status codes and the reason for the status code.
-\section{ /v1/ }
+\section{ /v1/gaen/ }
     \begin{verbatim}
-    get /v1/
+    get /v1/gaen/
     \end{verbatim}
-hello
+Hello return
 
 \subsection{Responses}
 \subsubsection{ 200 Success }
+server live
  
 
     
@@ -74,11 +75,59 @@ hello
 
         \end{ubresponses}
     
-\section{ /v1/exposed }
+\section{ /v1/gaen/exposed }
     \begin{verbatim}
-    post /v1/exposed
+    post /v1/gaen/exposed
     \end{verbatim}
-Endpoint used to publish the SecretKey.
+\begin{itemize}
+Send exposed keys to server\item includes a fix for the fact that GAEN doesn&#39;t give access to the current day&#39;s exposed key
+\end{itemize}
+\subsection{ Request Headers }
+\begin{ubparam}{\textwidth}{|H|c|Y|}
+\ubheader{Field} & \ubheader{Type} & \ubheader{Description}\\
+\hline
+\ubheader{ User-Agent }   \textcolor{red}{\emph{*}}  &  string  & App Identifier (PackageName/BundleIdentifier) + App-Version + OS (Android/iOS) + OS-Version
+ \\
+\hline
+\end{ubparam}
+
+\subsection{ Request Body }
+\begin{ubparam}{\textwidth}{|H|c|Y|}
+\ubheader{Field} & \ubheader{Type} & \ubheader{Description}\\
+\hline
+\ubheader{  }   \textcolor{red}{\emph{*}}  &  GaenRequest  & The GaenRequest contains the SecretKey from the guessed infection date, the infection date itself, and some authentication data to verify the test result
+ \\
+\hline
+\end{ubparam}
+\subsection{Responses}
+\subsubsection{ 200 Success }
+The exposed keys have been stored in the database
+ 
+
+    
+        \begin{ubresponses}{\textwidth}{|Y|}
+        \ubheader{Type}\\
+        \hline
+             \hyperref[sec:string] { string } \\
+ \hline
+
+        \end{ubresponses}
+    
+\subsubsection{ 400 Bad Request }
+Invalid base64 encoding in GaenRequest
+ 
+
+
+\subsubsection{ 403 Forbidden }
+Authentication failed
+ 
+
+
+\section{ /v1/gaen/exposednextday }
+    \begin{verbatim}
+    post /v1/gaen/exposednextday
+    \end{verbatim}
+Allows the client to send the last exposed key of the infection to the backend server. The JWT must come from a previous call to /exposed
 
 \subsection{ Request Headers }
 \begin{ubparam}{\textwidth}{|H|c|Y|}
@@ -93,13 +142,13 @@ Endpoint used to publish the SecretKey.
 \begin{ubparam}{\textwidth}{|H|c|Y|}
 \ubheader{Field} & \ubheader{Type} & \ubheader{Description}\\
 \hline
-\ubheader{  }   \textcolor{red}{\emph{*}}  &  ExposeeRequest  & The ExposeeRequest contains the SecretKey from the guessed infection date, the infection date itself, and some authentication data to verify the test result
+\ubheader{  }   \textcolor{red}{\emph{*}}  &  GaenSecondDay  & The last exposed key of the user
  \\
 \hline
 \end{ubparam}
 \subsection{Responses}
 \subsubsection{ 200 Success }
-Returns OK if successful
+The exposed key has been stored in the backend
  
 
     
@@ -112,40 +161,182 @@ Returns OK if successful
         \end{ubresponses}
     
 \subsubsection{ 400 Bad Request }
-Key is not base64 encoded
+\begin{itemize}
+\item Ivnalid base64 encoded Temporary Exposure Key- TEK-date does not match delayedKeyDAte claim in Jwt
+\end{itemize} 
+
+
+\subsubsection{ 403 Forbidden }
+No delayedKeyDate claim in authentication
  
 
 
-\section{ /v1/exposed/{dayDateStr} }
+\section{ /v1/gaen/exposed/{keyDate} }
     \begin{verbatim}
-    get /v1/exposed/{dayDateStr}
+    get /v1/gaen/exposed/{keyDate}
     \end{verbatim}
+Request the exposed key from a given date
+
+
+\subsection{ Query Parameters }
+\begin{ubparam}{\textwidth}{|H|c|Y|}
+\ubheader{Field} & \ubheader{Type} & \ubheader{Description}\\
+\hline
+\ubheader{ publishedafter }   &  integer  & Restrict returned Exposed Keys to dates after this parameter. Given in milliseconds since Unix epoch (1970-01-01).
+ \\
+\hline
+\end{ubparam}
+
+\subsection{ Path Parameters }
+\begin{ubparam}{\textwidth}{|H|c|Y|}
+\ubheader{Field} & \ubheader{Type} & \ubheader{Description}\\
+\hline
+\ubheader{ keyDate }   \textcolor{red}{\emph{*}}  &  integer  & Requested date for Exposed Keys retrieval, in milliseconds since Unix epoch (1970-01-01). It must indicate the beginning of a TEKRollingPeriod, currently midnight UTC.
+ \\
+\hline
+\end{ubparam}
+\subsection{Responses}
+\subsubsection{ 200 Success }
+zipped export.bin and export.sig of all keys in that interval
+ 
+
+        
+    This request returns \textbf{ application/zip }. This represents zipped export.bin and export.sig of all keys in that interval
+.
+
+\subsubsection{ 500 Internal Server Error }
+\begin{itemize}
+\item invalid starting key date, doesn&#39;t point to midnight UTC- \emph{publishedAfter} is not at the beginning of a batch release time, currently 2h
+\end{itemize} 
+
+
+\section{ /v1/gaen/buckets/{dayDateStr} }
+    \begin{verbatim}
+    get /v1/gaen/buckets/{dayDateStr}
+    \end{verbatim}
+Request the available release batch times for a given day
 
 
 \subsection{ Path Parameters }
 \begin{ubparam}{\textwidth}{|H|c|Y|}
 \ubheader{Field} & \ubheader{Type} & \ubheader{Description}\\
 \hline
-\ubheader{ dayDateStr }   \textcolor{red}{\emph{*}}  &  string  & The date for which we want to get the SecretKey.
+\ubheader{ dayDateStr }   \textcolor{red}{\emph{*}}  &  string  & Starting date for exposed key retrieval, as ISO-8601 format
  \\
 \hline
 \end{ubparam}
 \subsection{Responses}
 \subsubsection{ 200 Success }
-Returns ExposedOverview, which includes all secretkeys which were published on \emph{dayDateStr}.
+zipped export.bin and export.sig of all keys in that interval
  
 
     
         \begin{ubresponses}{\textwidth}{|Y|}
         \ubheader{Type}\\
         \hline
-             \hyperref[sec:ExposedOverview] { ExposedOverview } \\
+             \hyperref[sec:DayBuckets] { DayBuckets } \\
+ \hline
+
+        \end{ubresponses}
+    
+\subsubsection{ 500 Internal Server Error }
+invalid starting key date, points outside of the retention range
+ 
+
+
+\section{ /v2/gaen/ }
+    \begin{verbatim}
+    get /v2/gaen/
+    \end{verbatim}
+Hello return
+
+\subsection{Responses}
+\subsubsection{ 200 Success }
+server live
+ 
+
+    
+        \begin{ubresponses}{\textwidth}{|Y|}
+        \ubheader{Type}\\
+        \hline
+             \hyperref[sec:string] { string } \\
+ \hline
+
+        \end{ubresponses}
+    
+\section{ /v2/gaen/exposed }
+    \begin{verbatim}
+    post /v2/gaen/exposed
+    \end{verbatim}
+    \begin{verbatim}
+    get /v2/gaen/exposed
+    \end{verbatim}
+Requests keys published \emph{after} lastKeyBundleTag. The response includes also international keys if includeAllInternationalKeys is set to true. (default is false)
+
+\subsection{ Request Headers }
+\begin{ubparam}{\textwidth}{|H|c|Y|}
+\ubheader{Field} & \ubheader{Type} & \ubheader{Description}\\
+\hline
+\ubheader{ User-Agent }   \textcolor{red}{\emph{*}}  &  string  & App Identifier (PackageName/BundleIdentifier) + App-Version + OS (Android/iOS) + OS-Version
+ \\
+\hline
+\end{ubparam}
+
+\subsection{ Query Parameters }
+\begin{ubparam}{\textwidth}{|H|c|Y|}
+\ubheader{Field} & \ubheader{Type} & \ubheader{Description}\\
+\hline
+\ubheader{ countries }   &  string[]  & List of origin countries of requested keys. (iso-3166-1 alpha-2).
+ \\
+\hline
+\ubheader{ lastKeyBundleTag }   &  integer  & Only retrieve keys published after the specified key-bundle tag. Optional, if no tag set, all keys for the retention period are returned
+ \\
+\hline
+\end{ubparam}
+
+\subsection{ Request Body }
+\begin{ubparam}{\textwidth}{|H|c|Y|}
+\ubheader{Field} & \ubheader{Type} & \ubheader{Description}\\
+\hline
+\ubheader{  }   \textcolor{red}{\emph{*}}  &  GaenV2UploadKeysRequest  & JSON Object containing all keys.
+ \\
+\hline
+\end{ubparam}
+\subsection{Responses}
+\subsubsection{ 200 Success }
+The exposed keys have been stored in the database
+ 
+
+    
+        \begin{ubresponses}{\textwidth}{|Y|}
+        \ubheader{Type}\\
+        \hline
+             \hyperref[sec:string] { string } \\
  \hline
 
         \end{ubresponses}
     
 \subsubsection{ 400 Bad Request }
-If dayDateStr has the wrong format
+\begin{itemize}
+\item Invalid base64 encoding in GaenRequest- negative rolling period- fake claim with non-fake keys
+\end{itemize} 
+
+
+\subsubsection{ 403 Forbidden }
+Authentication failed
+ 
+
+
+\subsubsection{ 200 Success }
+zipped export.bin and export.sig of all keys in that interval
+ 
+
+        
+    This request returns \textbf{ application/octet-stream }. This represents zipped export.bin and export.sig of all keys in that interval
+.
+
+\subsubsection{ 500 Internal Server Error }
+Invalid \emph{lastKeyBundleTag}
  
 
 
@@ -153,55 +344,82 @@ If dayDateStr has the wrong format
 \part{Models}
 All Models, which are used by the Endpoints are described here. For every field we give examples, to give an overview of what the backend expects.
 \label{sec:Models}
-\subsection{ ExposedOverview }
-\label{sec:ExposedOverview}
+\subsection{ DayBuckets }
+\label{sec:DayBuckets}
 \begin{ubresponses}{\textwidth}{|H|c|Y|p{3cm}|}
 \ubheader{Field} & \ubheader{Type}  &\ubheader{Description}& \ubheader{Example}\\
 \hline
- \ubheader{ exposed }  & \hyperref[sec:Exposee]{ Exposee[] }   & A list of all SecretKeys
- &  \seqsplit{c.f. Exposee model} \\
+ \ubheader{ dayTimestamp }  & \hyperref[sec:integer]{ integer }   & The day of all buckets, as midnight in milliseconds since the Unix epoch (1970-01-01)
+ &  \seqsplit{1593043200000} \\
+\hline
+ \ubheader{ day }  & \hyperref[sec:string]{ string }   & The day as given by the request in /v1/gaen/buckets/{dayDateStr}
+ &  \seqsplit{2020-06-27} \\
+\hline
+ \ubheader{ relativeUrls }  & \hyperref[sec:string]{ string[] }   & Relative URLs for the available release buckets
+ &  \seqsplit{} \\
 \hline
 
 \end{ubresponses}
 
-\subsection{ Exposee }
-\label{sec:Exposee}
+\subsection{ GaenKey }
+\label{sec:GaenKey}
 \begin{ubresponses}{\textwidth}{|H|c|Y|p{3cm}|}
 \ubheader{Field} & \ubheader{Type}  &\ubheader{Description}& \ubheader{Example}\\
 \hline
- \ubheader{ key }  \textcolor{red}{\emph{*}}  & \hyperref[sec:string]{ string }   & The SecretKey of a exposed as a base64 encoded string. The SecretKey consists of 32 bytes.
- &  \seqsplit{QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVpBQkNERUY=} \\
+ \ubheader{ keyData }  \textcolor{red}{\emph{*}}  & \hyperref[sec:string]{ string }   & Represents the 16-byte Temporary Exposure Key in base64
+ &  \seqsplit{} \\
 \hline
- \ubheader{ onset }  \textcolor{red}{\emph{*}}  & \hyperref[sec:string]{ string }   & The onset of an exposed.
- &  \seqsplit{2020-04-06} \\
+ \ubheader{ rollingStartNumber }  \textcolor{red}{\emph{*}}  & \hyperref[sec:integer]{ integer }   & The ENIntervalNumber as number of 10-minute intervals since the Unix epoch (1970-01-01)
+ &  \seqsplit{} \\
+\hline
+ \ubheader{ rollingPeriod }  \textcolor{red}{\emph{*}}  & \hyperref[sec:integer]{ integer }   & The TEKRollingPeriod indicates for how many 10-minute intervals the Temporary Exposure Key is valid
+ &  \seqsplit{} \\
+\hline
+ \ubheader{ transmissionRiskLevel }  \textcolor{red}{\emph{*}}  & \hyperref[sec:integer]{ integer }   & According to the Google API description a value between 0 and 4096, with higher values indicating a higher risk
+ &  \seqsplit{} \\
+\hline
+ \ubheader{ fake }  & \hyperref[sec:integer]{ integer }   & If fake = 0, the key is a valid key. If fake = 1, the key will be discarded.
+ &  \seqsplit{} \\
 \hline
 
 \end{ubresponses}
 
-\subsection{ ExposeeAuthData }
-\label{sec:ExposeeAuthData}
+\subsection{ GaenRequest }
+\label{sec:GaenRequest}
 \begin{ubresponses}{\textwidth}{|H|c|Y|p{3cm}|}
 \ubheader{Field} & \ubheader{Type}  &\ubheader{Description}& \ubheader{Example}\\
 \hline
- \ubheader{ value }  & \hyperref[sec:string]{ string }   & Authentication data used to verify the test result (base64 encoded)
- &  \seqsplit{TBD} \\
+ \ubheader{ gaenKeys }  \textcolor{red}{\emph{*}}  & \hyperref[sec:GaenKey]{ GaenKey[] }   & \begin{itemize}
+Between 14 and 30 Temporary Exposure Keys\item zero or more of them might be fake keys. Starting with EN 1.5 it is possible that clients send more than 14 keys.
+\end{itemize} &  \seqsplit{} \\
+\hline
+ \ubheader{ delayedKeyDate }  \textcolor{red}{\emph{*}}  & \hyperref[sec:integer]{ integer }   & Prior to version 1.5 Exposure Keys for the day of report weren't available (since they were still used throughout this day RPI=144), so the submission of the last key had to be delayed. This Unix timestamp in milliseconds specifies, which key date the last key (which will be submitted on the next day) will have. The backend then issues a JWT to allow the submission of this last key with specified key date. This should not be necessary after the Exposure Framework is able to send and handle keys with RollingPeriod < 144 (e.g. only valid until submission).
+ &  \seqsplit{} \\
 \hline
 
 \end{ubresponses}
 
-\subsection{ ExposeeRequest }
-\label{sec:ExposeeRequest}
+\subsection{ GaenSecondDay }
+\label{sec:GaenSecondDay}
 \begin{ubresponses}{\textwidth}{|H|c|Y|p{3cm}|}
 \ubheader{Field} & \ubheader{Type}  &\ubheader{Description}& \ubheader{Example}\\
 \hline
- \ubheader{ key }  \textcolor{red}{\emph{*}}  & \hyperref[sec:string]{ string }   & The SecretKey used to generate EphID base64 encoded.
- &  \seqsplit{QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVpBQkNERUY=} \\
+ \ubheader{ delayedKey }  \textcolor{red}{\emph{*}}  & \hyperref[sec:GaenKey]{ GaenKey }   &  &  \seqsplit{} \\
 \hline
- \ubheader{ onset }  \textcolor{red}{\emph{*}}  & \hyperref[sec:string]{ string }   & The onset date of the secret key. Format: yyyy-MM-dd
- &  \seqsplit{2019-01-31} \\
+
+\end{ubresponses}
+
+\subsection{ GaenV2UploadKeysRequest }
+\label{sec:GaenV2UploadKeysRequest}
+\begin{ubresponses}{\textwidth}{|H|c|Y|p{3cm}|}
+\ubheader{Field} & \ubheader{Type}  &\ubheader{Description}& \ubheader{Example}\\
 \hline
- \ubheader{ authData }  \textcolor{red}{\emph{*}}  & \hyperref[sec:ExposeeAuthData]{ ExposeeAuthData }   & AuthenticationData provided by the health institutes to verify the test results
- &  \seqsplit{TBD} \\
+ \ubheader{ countries }  & \hyperref[sec:string]{ string[] }   & List of countries of interest.
+ &  \seqsplit{} \\
+\hline
+ \ubheader{ gaenKeys }  \textcolor{red}{\emph{*}}  & \hyperref[sec:GaenKey]{ GaenKey[] }   & \begin{itemize}
+30 Temporary Exposure Keys\item zero or more of them might be fake keys.
+\end{itemize} &  \seqsplit{} \\
 \hline
 
 \end{ubresponses}

@@ -58,7 +58,7 @@ public class GaenDataServiceTest {
     tmpKey2.setTransmissionRiskLevel(0);
     List<GaenKey> keys = List.of(tmpKey, tmpKey2);
     var now = UTCInstant.now();
-    gaenDataService.upsertExposees(keys, now, false);
+    gaenDataService.upsertExposees(keys, now, null);
 
     // calculate exposed until bucket, but get bucket in the future, as keys have
     // been inserted with timestamp now.
@@ -91,10 +91,10 @@ public class GaenDataServiceTest {
     tmpKey2.setTransmissionRiskLevel(0);
     List<GaenKey> keys = List.of(tmpKey, tmpKey2);
     var now = UTCInstant.now();
-    gaenDataService.upsertExposees(keys, now, false);
+    gaenDataService.upsertExposees(keys, now, null);
 
     var returnedKeys =
-        gaenDataService.getSortedExposedSince(now.minusDays(10), now.plusDays(1), true);
+        gaenDataService.getSortedExposedSince(now.minusDays(10), now.plusDays(1), null);
 
     assertEquals(keys.size(), returnedKeys.size());
     assertEquals(keys.get(1).getKeyData(), returnedKeys.get(0).getKeyData());
@@ -120,7 +120,7 @@ public class GaenDataServiceTest {
       tmpKey.setFake(0);
       tmpKey.setTransmissionRiskLevel(0);
 
-      gaenDataService.upsertExposees(List.of(tmpKey), now, false);
+      gaenDataService.upsertExposees(List.of(tmpKey), now, null);
     }
     // key was inserted with a rolling period of 10 hours, which means the key is not allowed to be
     // released before 12, but since 12 already is in the 14 O'Clock bucket, it is not released
@@ -162,7 +162,7 @@ public class GaenDataServiceTest {
     tmpKey2.setTransmissionRiskLevel(0);
     List<GaenKey> keys = List.of(tmpKey, tmpKey2);
     var now = UTCInstant.now();
-    gaenDataService.upsertExposees(keys, now, false);
+    gaenDataService.upsertExposees(keys, now, null);
 
     // calculate exposed until bucket, but get bucket in the future, as keys have
     // been inserted with timestamp now.

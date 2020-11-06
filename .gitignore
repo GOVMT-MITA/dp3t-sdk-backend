@@ -39,3 +39,7 @@ hs_err_pid*
 # maven
 **/target
 **/generated
+
+# PKI related files
+*.p12
+*.pfx

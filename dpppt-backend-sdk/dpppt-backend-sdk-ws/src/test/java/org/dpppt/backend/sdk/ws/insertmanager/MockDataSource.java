@@ -9,13 +9,13 @@ import org.dpppt.backend.sdk.utils.UTCInstant;
 public class MockDataSource implements GAENDataService {
 
   @Override
-  public void upsertExposees(List<GaenKey> keys, UTCInstant now, boolean international) {
+  public void upsertExposees(List<GaenKey> keys, UTCInstant now, List<String> countries) {
     throw new RuntimeException("UPSERT_EXPOSEES");
   }
 
   @Override
   public void upsertExposeesDelayed(
-      List<GaenKey> keys, UTCInstant delayedReceivedAt, UTCInstant now, boolean international) {
+      List<GaenKey> keys, UTCInstant delayedReceivedAt, UTCInstant now, List<String> countries) {
     throw new RuntimeException("UPSERT_EXPOSEESDelayed");
   }
 
@@ -33,7 +33,7 @@ public class MockDataSource implements GAENDataService {
   public List<GaenKey> getSortedExposedSince(
       UTCInstant keysSince,
       UTCInstant now,
-      boolean includeAllInternationalKeys) { // TODO Auto-generated method stub
+      List<String> countries) { // TODO Auto-generated method stub
     return null;
   }
 

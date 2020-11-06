@@ -53,7 +53,7 @@ public class FakeKeyService {
         keys.add(key);
       }
       // TODO: Check if currentKeyDate is indeed intended here
-      this.dataService.upsertExposees(keys, currentKeyDate, false);
+      this.dataService.upsertExposees(keys, currentKeyDate, null);
       tmpDate = tmpDate.plusDays(1);
     } while (tmpDate.isBeforeDateOf(currentKeyDate));
   }

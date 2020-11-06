@@ -10,8 +10,6 @@
 
 package org.dpppt.backend.sdk.ws.config;
 
-import java.util.Map;
-
 import javax.sql.DataSource;
 import org.dpppt.backend.sdk.ws.security.KeyVault;
 import org.dpppt.backend.sdk.ws.security.KeyVault.PrivateKeyNoSuitableEncodingFoundException;
@@ -19,9 +17,6 @@ import org.dpppt.backend.sdk.ws.security.KeyVault.PublicKeyNoSuitableEncodingFou
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.CloudFactory;
-import org.springframework.cloud.service.PooledServiceConnectorConfig.PoolConfig;
-import org.springframework.cloud.service.relational.DataSourceConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;

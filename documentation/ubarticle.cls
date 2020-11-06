@@ -52,7 +52,7 @@ BoldFont = *-Bold]
 \pagestyle{fancy}
 \fancyhf{}
 \rfoot{\textcolor{gray}{\today}}
-\cfoot{\textcolor{gray}{\thepage~von~\pageref{LastPage} }}
-\lfoot{\textcolor{gray}{Vertraulich}}
+\cfoot{\textcolor{gray}{\thepage~of~\pageref{LastPage} }}
+\lfoot{\textcolor{gray}{Restricted}}
 
 

@@ -33,7 +33,7 @@ public class InsertManagerTest {
           new InsertManager(
               new MockDataSource(),
               new ValidationUtils(16, Duration.ofDays(14), Duration.ofHours(2).toMillis()));
-      manager.insertIntoDatabase(new ArrayList<>(), null, null, null, false);
+      manager.insertIntoDatabase(new ArrayList<>(), null, null, null, null);
     } catch (Exception ex) {
       theException = ex;
     }
@@ -48,7 +48,7 @@ public class InsertManagerTest {
           new InsertManager(
               new MockDataSource(),
               new ValidationUtils(16, Duration.ofDays(14), Duration.ofHours(2).toMillis()));
-      manager.insertIntoDatabase(null, null, null, null, false);
+      manager.insertIntoDatabase(null, null, null, null, null);
     } catch (Exception ex) {
       theException = ex;
     }
@@ -68,7 +68,7 @@ public class InsertManagerTest {
             new ValidationUtils(16, Duration.ofDays(14), Duration.ofHours(2).toMillis()));
     var key = new GaenKey("POSTMAN+POSTMAN+", (int) UTCInstant.now().get10MinutesSince1970(), 144);
     try {
-      manager.insertIntoDatabase(List.of(key), "test", null, UTCInstant.now(), false);
+      manager.insertIntoDatabase(List.of(key), "test", null, UTCInstant.now(), null);
     } catch (RuntimeException ex) {
       if (!ex.getMessage().equals("UPSERT_EXPOSEES")) {
         throw ex;
@@ -96,7 +96,7 @@ public class InsertManagerTest {
     var key = new GaenKey("POSTMAN+POSTMAN+", (int) UTCInstant.now().get10MinutesSince1970(), 0);
     try {
       manager.insertIntoDatabase(
-          List.of(key), "org.dpppt.testrunner;1.0.0;1;iOS;29", null, UTCInstant.now(), false);
+          List.of(key), "org.dpppt.testrunner;1.0.0;1;iOS;29", null, UTCInstant.now(), null);
     } catch (RuntimeException ex) {
       if (!ex.getMessage().equals("UPSERT_EXPOSEES")) {
         throw ex;

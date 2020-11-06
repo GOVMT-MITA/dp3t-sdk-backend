@@ -11,15 +11,13 @@ import javax.validation.constraints.Size;
 
 public class GaenV2UploadKeysRequest {
 
+  @NotEmpty
   @Valid
-  @Min(value = 0)
-  @Max(value = 1)
   @Documentation(
       description =
-          "If internationl = 0 key is only for the origin country. If international = 1 key is"
-              + " distributed to other countries")
-  private int international = 0;
-
+          "List of countries of interest.")
+  List<String> countries;
+  
   @NotNull
   @NotEmpty
   @Valid
@@ -36,11 +34,13 @@ public class GaenV2UploadKeysRequest {
     this.gaenKeys = gaenKeys;
   }
 
-  public int getInternational() {
-    return international;
+  public List<String> getCountries() {
+	return countries;
   }
 
-  public void setInternational(int international) {
-    this.international = international;
+  public void setCountries(List<String> countries) {
+	this.countries = countries;
   }
+
+
 }

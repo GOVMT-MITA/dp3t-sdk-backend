@@ -13,6 +13,7 @@ package org.dpppt.backend.sdk.data.gaen;
 import java.time.Duration;
 import java.util.List;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyWithRegions;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 
 public interface GAENDataService {
@@ -26,7 +27,7 @@ public interface GAENDataService {
    * @param visitedCountries the countries the key visited
    */
   void upsertExposeeFromInterops(
-      GaenKey key, UTCInstant now, String origin, List<String> visitedCountries);
+      GaenKey key, UTCInstant now, String origin, List<String> countries);
 
   /**
    * Upserts (Update or Inserts) the given list of exposed keys
@@ -36,7 +37,7 @@ public interface GAENDataService {
    * @param international if set to true, the given keys are stored such that they have visited all
    *     configured countries.
    */
-  void upsertExposees(List<GaenKey> keys, UTCInstant now, boolean international);
+  void upsertExposees(List<GaenKey> keys, UTCInstant now, List<String> countries);
 
   /**
    * Upserts (Update or Inserts) the given list of exposed keys, with delayed release of same day
@@ -50,7 +51,7 @@ public interface GAENDataService {
    *     configured countries.
    */
   void upsertExposeesDelayed(
-      List<GaenKey> keys, UTCInstant delayedReceivedAt, UTCInstant now, boolean international);
+      List<GaenKey> keys, UTCInstant delayedReceivedAt, UTCInstant now, List<String> countries);
 
   /**
    * Returns all exposeed keys for the given batch, where a batch is parametrized with keyDate (for
@@ -78,10 +79,19 @@ public interface GAENDataService {
    *
    * @param keysSince
    * @param now
-   * @param includeAllInternationalKeys If set to true, all international keys are returned in the
-   *     result. Otherwise only keys from the origin country.
+   * @param countries List of countries to retrieve. Otherwise only keys from the origin country.
    * @return
    */
   List<GaenKey> getSortedExposedSince(
-      UTCInstant keysSince, UTCInstant now, boolean includeAllInternationalKeys);
+      UTCInstant keysSince, UTCInstant now, List<String> countries);
+
+  /**
+   * Returns origin country exposed keys since keySince.
+   *
+   * @param keysSince
+   * @param now
+   * @return
+   */
+  List<GaenKeyWithRegions> getSortedExposedSinceForInterop(UTCInstant keysSince, UTCInstant now);
+
 }

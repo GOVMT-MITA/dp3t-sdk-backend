@@ -137,7 +137,7 @@ public class GaenV2Controller {
         userAgent,
         principal,
         now,
-        gaenV2Request.getInternational() == 1);
+        gaenV2Request.getCountries());
     var responseBuilder = ResponseEntity.ok();
     Callable<ResponseEntity<String>> cb =
         () -> {
@@ -163,15 +163,20 @@ public class GaenV2Controller {
         "404 => Invalid _lastKeyBundleTag_"
       })
   public @ResponseBody ResponseEntity<byte[]> getExposedKeys(
-      @Documentation(
+		  @Documentation(
+	              description =
+	                  "List of origin countries of requested keys. (iso-3166-1 alpha-2).",
+	              example = "MT")
+	          @RequestParam(required = false)
+	          List<String> countries,
+		  @Documentation(
               description =
                   "Only retrieve keys published after the specified key-bundle"
                       + " tag. Optional, if no tag set, all keys for the"
                       + " retention period are returned",
               example = "1593043200000")
           @RequestParam(required = false)
-          Long lastKeyBundleTag,
-      @RequestParam(required = false, defaultValue = "false") boolean includeAllInternationalKeys)
+          Long lastKeyBundleTag)
       throws BadBatchReleaseTimeException, InvalidKeyException, SignatureException,
           NoSuchAlgorithmException, IOException {
     var now = UTCInstant.now();
@@ -190,7 +195,7 @@ public class GaenV2Controller {
     UTCInstant keyBundleTag = now.roundToBucketStart(releaseBucketDuration);
 
     List<GaenKey> exposedKeys =
-        dataService.getSortedExposedSince(keysSince, now, includeAllInternationalKeys);
+        dataService.getSortedExposedSince(keysSince, now, countries);
 
     if (exposedKeys.isEmpty()) {
       return ResponseEntity.noContent()

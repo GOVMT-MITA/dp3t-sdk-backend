@@ -175,7 +175,7 @@ public class PostgresGaenDataServiceTest {
     tmpKey.setFake(0);
     List<GaenKey> keys = List.of(tmpKey);
 
-    gaenDataService.upsertExposees(keys, UTCInstant.now(), false);
+    gaenDataService.upsertExposees(keys, UTCInstant.now(), null);
 
     var now = UTCInstant.now();
     // calculate exposed until bucket, but get bucket in the future, as keys have

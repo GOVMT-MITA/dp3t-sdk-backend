@@ -48,6 +48,7 @@
 		<module>dpppt-backend-sdk-ws</module>
 		<module>dpppt-backend-sdk-report</module>
 		<module>dpppt-backend-sdk-interops</module>
+		<module>dpppt-backend-sdk-interops-efgs</module>
 	</modules>
 
 	<dependencies>
@@ -445,7 +446,7 @@
 				<plugin>
 					<groupId>ch.ubique.openapi</groupId>
 					<artifactId>springboot-swagger-3</artifactId>
-					<version>1.2.8</version>
+					<version>1.3.1</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
