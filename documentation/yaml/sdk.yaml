@@ -285,6 +285,7 @@ components:
           description: Between 14 and 30 Temporary Exposure Keys - zero or more of
             them might be fake keys. Starting with EN 1.5 it is possible that clients
             send more than 14 keys.
+          example: ''
         delayedKeyDate:
           type: integer
           description: Prior to version 1.5 Exposure Keys for the day of report weren't

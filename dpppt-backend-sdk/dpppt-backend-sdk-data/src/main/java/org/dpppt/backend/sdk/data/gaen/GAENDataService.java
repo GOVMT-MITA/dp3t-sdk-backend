@@ -13,7 +13,7 @@ package org.dpppt.backend.sdk.data.gaen;
 import java.time.Duration;
 import java.util.List;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
-import org.dpppt.backend.sdk.model.gaen.GaenKeyWithRegions;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInterop;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 
 public interface GAENDataService {
@@ -38,6 +38,14 @@ public interface GAENDataService {
    *     configured countries.
    */
   void upsertExposees(List<GaenKey> keys, UTCInstant now, List<String> countries);
+
+  /**
+   * Upserts (Update or Inserts) the given list of exposed keys
+   *
+   * @param keys the list of exposed keys to upsert
+   * @param now time of the request
+   */
+  void upsertExposees(List<GaenKey> keys, UTCInstant now);
 
   /**
    * Upserts (Update or Inserts) the given list of exposed keys, with delayed release of same day
@@ -86,12 +94,22 @@ public interface GAENDataService {
       UTCInstant keysSince, UTCInstant now, List<String> countries);
 
   /**
+   * Returns all exposed keys since keySince.
+   *
+   * @param keysSince
+   * @param now
+   * @return
+   */
+  List<GaenKey> getSortedExposedSince(
+      UTCInstant keysSince, UTCInstant now);
+
+  /**
    * Returns origin country exposed keys since keySince.
    *
    * @param keysSince
    * @param now
    * @return
    */
-  List<GaenKeyWithRegions> getSortedExposedSinceForInterop(UTCInstant keysSince, UTCInstant now);
+  List<GaenKeyInterop> getSortedExposedSinceForInterop(UTCInstant keysSince, UTCInstant now);
 
 }

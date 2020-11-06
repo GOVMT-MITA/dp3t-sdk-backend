@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.List;
 import org.dpppt.backend.sdk.data.gaen.GAENDataService;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInterop;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 
 public class MockDataSource implements GAENDataService {
@@ -44,4 +45,19 @@ public class MockDataSource implements GAENDataService {
       String origin,
       List<String> visitedCountries) { // TODO Auto-generated method stub
   }
+
+@Override
+public void upsertExposees(List<GaenKey> keys, UTCInstant now) {
+	this.upsertExposees(keys, now, null);
+}
+
+@Override
+public List<GaenKey> getSortedExposedSince(UTCInstant keysSince, UTCInstant now) {
+	return this.getSortedExposedSince(keysSince, now, null);
+}
+
+@Override
+public List<GaenKeyInterop> getSortedExposedSinceForInterop(UTCInstant keysSince, UTCInstant now) {
+	return null;
+}
 }

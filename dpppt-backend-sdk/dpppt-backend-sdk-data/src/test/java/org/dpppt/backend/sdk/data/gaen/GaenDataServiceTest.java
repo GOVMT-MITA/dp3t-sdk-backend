@@ -74,30 +74,41 @@ public class GaenDataServiceTest {
 
   @Test
   @Transactional
-  public void upsertAndGetSince() throws Exception {
-    var tmpKey = new GaenKey();
-    tmpKey.setRollingStartNumber(
-        (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
-    tmpKey.setKeyData(Base64.getEncoder().encodeToString("testKey32Bytes01".getBytes("UTF-8")));
-    tmpKey.setRollingPeriod(144);
-    tmpKey.setFake(0);
-    tmpKey.setTransmissionRiskLevel(0);
-    var tmpKey2 = new GaenKey();
-    tmpKey2.setRollingStartNumber(
-        (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
-    tmpKey2.setKeyData(Base64.getEncoder().encodeToString("testKey32Bytes02".getBytes("UTF-8")));
-    tmpKey2.setRollingPeriod(144);
-    tmpKey2.setFake(0);
-    tmpKey2.setTransmissionRiskLevel(0);
-    List<GaenKey> keys = List.of(tmpKey, tmpKey2);
-    var now = UTCInstant.now();
-    gaenDataService.upsertExposees(keys, now, null);
+  public void testNoEarlyReleaseSince() throws Exception {
+    var outerNow = UTCInstant.now();
+    Clock twoOClock =
+        Clock.fixed(outerNow.atStartOfDay().plusHours(2).getInstant(), ZoneOffset.UTC);
+    Clock elevenOClock =
+        Clock.fixed(outerNow.atStartOfDay().plusHours(11).getInstant(), ZoneOffset.UTC);
+    Clock fourteenOClock =
+        Clock.fixed(outerNow.atStartOfDay().plusHours(14).getInstant(), ZoneOffset.UTC);
 
-    var returnedKeys =
-        gaenDataService.getSortedExposedSince(now.minusDays(10), now.plusDays(1), null);
+    try (var now = UTCInstant.setClock(twoOClock)) {
+      var tmpKey = new GaenKey();
+      tmpKey.setRollingStartNumber((int) now.atStartOfDay().get10MinutesSince1970());
+      tmpKey.setKeyData(Base64.getEncoder().encodeToString("testKey32Bytes--".getBytes("UTF-8")));
+      tmpKey.setRollingPeriod(
+          (int) Duration.ofHours(10).dividedBy(GaenUnit.TenMinutes.getDuration()));
+      tmpKey.setFake(0);
+      tmpKey.setTransmissionRiskLevel(0);
 
-    assertEquals(keys.size(), returnedKeys.size());
-    assertEquals(keys.get(1).getKeyData(), returnedKeys.get(0).getKeyData());
+      gaenDataService.upsertExposees(List.of(tmpKey), now);
+    }
+    // key was inserted with a rolling period of 10 hours, which means the key is not allowed to be
+    // released before 12, but since 12 already is in the 14 O'Clock bucket, it is not released
+    // before 14:00
+
+    // eleven O'clock no key
+    try (var now = UTCInstant.setClock(elevenOClock)) {
+      var returnedKeys = gaenDataService.getSortedExposedSince(now.minusDays(10), now);
+      assertEquals(0, returnedKeys.size());
+    }
+
+    // twelve O'clock release the key
+    try (var now = UTCInstant.setClock(fourteenOClock)) {
+      var returnedKeys = gaenDataService.getSortedExposedSince(now.minusDays(10), now);
+      assertEquals(1, returnedKeys.size());
+    }
   }
 
   @Test

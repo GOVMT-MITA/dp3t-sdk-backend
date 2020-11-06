@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 import javax.sql.DataSource;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
-import org.dpppt.backend.sdk.model.gaen.GaenKeyWithRegions;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInterop;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -183,7 +183,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 
   
   @Transactional(readOnly = true)
-  public List<GaenKeyWithRegions> getSortedExposedSinceForInterop(
+  public List<GaenKeyInterop> getSortedExposedSinceForInterop(
       UTCInstant keysSince, UTCInstant now) {
     MapSqlParameterSource params = new MapSqlParameterSource();
     params.addValue("since", keysSince.getDate());
@@ -222,10 +222,10 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 
     sql += " order by keys.pk_exposed_id desc";
 
-    List<GaenKeyWithRegions> keys = jt.query(sql, params, new GaenKeyWithRegionsRowMapper());
-    Map<String, List<GaenKeyWithRegions>> groupedKeys = keys.stream().collect(Collectors.groupingBy(GaenKeyWithRegions::getKeyData));
+    List<GaenKeyInterop> keys = jt.query(sql, params, new GaenKeyWithRegionsRowMapper());
+    Map<String, List<GaenKeyInterop>> groupedKeys = keys.stream().collect(Collectors.groupingBy(GaenKeyInterop::getKeyData));
     
-    final List<GaenKeyWithRegions> finalKeys = new ArrayList<>(); 
+    final List<GaenKeyInterop> finalKeys = new ArrayList<>(); 
     groupedKeys.keySet().forEach(k -> {
     	finalKeys.add(groupedKeys.get(k).stream().reduce(null, (o, n) -> {
     		if (null == o) {
@@ -319,4 +319,14 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
           sqlVisited, visitedBatch.toArray(new MapSqlParameterSource[visitedBatch.size()]));
     }
   }
+
+@Override
+public void upsertExposees(List<GaenKey> keys, UTCInstant now) {
+	this.upsertExposees(keys, now, null);	
+}
+
+@Override
+public List<GaenKey> getSortedExposedSince(UTCInstant keysSince, UTCInstant now) {
+	return this.getSortedExposedSince(keysSince, now, null);
+}
 }
