@@ -24,7 +24,7 @@ public interface GAENDataService {
    * @param key the exposed key to upsert
    * @param now time of the sync
    * @param origin the origin or the key
-   * @param visitedCountries the countries the key visited
+   * @param countries the countries associated with the key
    */
   void upsertExposeeFromInterops(
       GaenKey key, UTCInstant now, String origin, List<String> countries);
@@ -34,8 +34,7 @@ public interface GAENDataService {
    *
    * @param keys the list of exposed keys to upsert
    * @param now time of the request
-   * @param international if set to true, the given keys are stored such that they have visited all
-   *     configured countries.
+   * @param countries the countries associated with the key
    */
   void upsertExposees(List<GaenKey> keys, UTCInstant now, List<String> countries);
 
@@ -55,8 +54,7 @@ public interface GAENDataService {
    * @param delayedReceivedAt the timestamp to use for the delayed release (if null use now rounded
    *     to next bucket)
    * @param now time of the request
-   * @param international if set to true, the given keys are stored such that they have visited all
-   *     configured countries.
+   * @param countries the countries associated with the key
    */
   void upsertExposeesDelayed(
       List<GaenKey> keys, UTCInstant delayedReceivedAt, UTCInstant now, List<String> countries);

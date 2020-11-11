@@ -152,6 +152,9 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 
   @Value("${ws.international.countries:}")
   List<String> otherCountries;
+  
+  @Value("${ws.interop.enabled:false}")
+  boolean interopEnabled;
 
   @Autowired(required = false)
   ValidateRequest requestValidator;

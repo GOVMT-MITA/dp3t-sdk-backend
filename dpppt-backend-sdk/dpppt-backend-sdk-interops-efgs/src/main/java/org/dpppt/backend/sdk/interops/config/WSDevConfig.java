@@ -10,8 +10,15 @@
 
 package org.dpppt.backend.sdk.interops.config;
 
+import java.time.Duration;
+
 import javax.sql.DataSource;
+
+import org.dpppt.backend.sdk.data.gaen.FakeKeyService;
+import org.dpppt.backend.sdk.data.gaen.GAENDataService;
+import org.dpppt.backend.sdk.data.gaen.JDBCGAENDataServiceImpl;
 import org.flywaydb.core.Flyway;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -47,4 +54,28 @@ public class WSDevConfig extends WSBaseConfig {
   public String getDbType() {
     return "hsqldb";
   }
+
+  @Value("${ws.gaen.randomkeysenabled: true}")
+  boolean randomkeysenabled;
+
+  @Value("${ws.gaen.randomkeyamount: 10}")
+  int randomkeyamount;
+
+  @Value("${ws.app.gaen.key_size: 16}")
+  int gaenKeySizeBytes;
+  
+  @Bean
+  public FakeKeyService fakeKeyService(GAENDataService fakeGaenService) {
+    try {
+      return new FakeKeyService(
+          fakeGaenService,
+          Integer.valueOf(randomkeyamount),
+          Integer.valueOf(gaenKeySizeBytes),
+          Duration.ofDays(retentionDays),
+          randomkeysenabled);
+    } catch (Exception ex) {
+      throw new RuntimeException("FakeKeyService could not be instantiated", ex);
+    }
+  }
+  
 }

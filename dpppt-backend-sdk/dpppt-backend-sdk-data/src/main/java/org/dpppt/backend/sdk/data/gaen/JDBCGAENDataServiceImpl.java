@@ -222,7 +222,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 
     sql += " order by keys.pk_exposed_id desc";
 
-    List<GaenKeyInterop> keys = jt.query(sql, params, new GaenKeyWithRegionsRowMapper());
+    List<GaenKeyInterop> keys = jt.query(sql, params, new GaenKeyInteropRowMapper());
     Map<String, List<GaenKeyInterop>> groupedKeys = keys.stream().collect(Collectors.groupingBy(GaenKeyInterop::getKeyData));
     
     final List<GaenKeyInterop> finalKeys = new ArrayList<>(); 
@@ -231,7 +231,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     		if (null == o) {
     			return n;
     		} else {
-    			o.getRegions().addAll(n.getRegions());
+    			o.getVisitedCountries().addAll(n.getVisitedCountries());
     			return o;
     		}    		
     	}));

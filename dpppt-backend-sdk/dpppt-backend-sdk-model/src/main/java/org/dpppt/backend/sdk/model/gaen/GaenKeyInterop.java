@@ -5,7 +5,7 @@ import java.util.List;
 
 public class GaenKeyInterop extends GaenKey {
 	
-	private List<String> regions;
+	private List<String> visitedCountries;
 	private int daysSinceOnsetOfSymptoms;
 
 	public int getDaysSinceOnsetOfSymptoms() {
@@ -16,23 +16,24 @@ public class GaenKeyInterop extends GaenKey {
 		this.daysSinceOnsetOfSymptoms = daysSinceOnsetOfSymptoms;
 	}
 
-	public List<String> getRegions() {
-		return regions;
-	}
-
-	public void setRegions(List<String> regions) {
-		this.regions = regions;
-	}
-
 	public GaenKeyInterop() {
 		super();
-		regions = new ArrayList<>();
+		visitedCountries = new ArrayList<>();
 	}
 
-	public GaenKeyInterop(String keyData, Integer rollingStartNumber, Integer rollingPeriod, List<String> regions) {
+	public GaenKeyInterop(String keyData, Integer rollingStartNumber, Integer rollingPeriod, List<String> visitedCountries) {
 		super(keyData, rollingStartNumber, rollingPeriod);
-		this.regions = regions;
+		this.visitedCountries = visitedCountries;
 	}
+
+	public List<String> getVisitedCountries() {
+		return visitedCountries;
+	}
+
+	public void setVisitedCountries(List<String> visitedCountries) {
+		this.visitedCountries = visitedCountries;
+	}
+	
 	
 
 	

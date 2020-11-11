@@ -18,7 +18,7 @@
  * ---license-end
  */
 
-package org.dpppt.backend.sdk.interops.utils;
+package org.dpppt.backend.sdk.interops.syncer;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ProtocolStringList;

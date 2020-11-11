@@ -2,9 +2,6 @@ package org.dpppt.backend.sdk.interops.syncer;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.cert.Certificate;
-import java.security.KeyStore;
-import java.security.PrivateKey;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -12,26 +9,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import java.security.cert.X509Certificate;
-
-import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaCertStore;
-import org.bouncycastle.cms.CMSProcessableByteArray;
-import org.bouncycastle.cms.CMSSignedData;
-import org.bouncycastle.cms.CMSSignedDataGenerator;
-import org.bouncycastle.cms.CMSTypedData;
-import org.bouncycastle.cms.jcajce.JcaSignerInfoGeneratorBuilder;
-import org.bouncycastle.operator.ContentSigner;
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
-import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
-import org.bouncycastle.util.Store;
+import java.util.stream.Collectors;
 import org.dpppt.backend.sdk.data.gaen.GAENDataService;
 import org.dpppt.backend.sdk.interops.batchsigning.SignatureGenerator;
 import org.dpppt.backend.sdk.interops.model.EfgsProto;
-import org.dpppt.backend.sdk.interops.model.IrishHubDownloadResponse;
-import org.dpppt.backend.sdk.interops.model.IrishHubKey;
+import org.dpppt.backend.sdk.interops.model.EfgsProto.ReportType;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInterop;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +27,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
 
 /**
  * Interops syncer for the irish hub:
@@ -57,14 +42,14 @@ public class EfgsSyncer {
   private final int retentionDays;
   private final int efgsMaxAgeDays;
   private final long efgsMaxDownloadKeys;
+  private final long efgsMaxUploadKeys;
+  private final String originCountry;
   private final GAENDataService gaenDataService;
   
-  private Long lastUploadKeyBundleTag = null;
   private final Duration releaseBucketDuration;
 
-  // keep batch tags per day.
-  private Map<LocalDate, String> lastBatchTag = new HashMap<>();
-
+  private final SyncStateService syncStateService;
+  
   // path for downloading keys. the %s must be replaced by day dates to retreive the keys for one
   // day, for example: 2020-09-15
   private static final String DOWNLOAD_PATH = "/diagnosiskeys/download/%s";
@@ -82,18 +67,24 @@ public class EfgsSyncer {
       int retentionDays,
       int efgsMaxAgeDays,
       long efgsMaxDownloadKeys,
+      long efgsMaxUploadKeys,
+      String originCountry,
       Duration releaseBucketDuration,
       GAENDataService gaenDataService,
       RestTemplate restTemplate,
-      SignatureGenerator signatureGenerator) {
+      SignatureGenerator signatureGenerator,
+      SyncStateService syncStateService) {
     this.baseUrl = baseUrl;
     this.retentionDays = retentionDays;
     this.efgsMaxAgeDays = efgsMaxAgeDays;
     this.efgsMaxDownloadKeys = efgsMaxDownloadKeys;
+    this.efgsMaxUploadKeys = efgsMaxUploadKeys;
+    this.originCountry = originCountry;
     this.gaenDataService = gaenDataService;
     this.restTemplate = restTemplate;
     this.releaseBucketDuration = releaseBucketDuration;
     this.signatureGenerator = signatureGenerator;
+    this.syncStateService = syncStateService;
   }
 
   public void sync() {
@@ -101,8 +92,8 @@ public class EfgsSyncer {
     logger.info("Start sync from: " + baseUrl);
     LocalDate today = LocalDate.now();
     try {
-      download(today);
-      //upload(lastUploadKeyBundleTag);
+      //download(today);
+      upload();
     } catch (Exception e) {
       logger.error("Exception downloading keys:", e);
     }
@@ -111,28 +102,79 @@ public class EfgsSyncer {
     logger.info("Sync done in: " + (end - start) + " [ms]");
   }
 
-  private void upload(Long lastKeyBundleTag) throws URISyntaxException {
+  private void upload() throws Exception {
 
 	  var now = UTCInstant.now();
 	  
-	  if (lastKeyBundleTag == null) {
+	  if (syncStateService.getLastUploadKeyBundleTag() == null) {
 	    // if no lastKeyBundleTag is set yet, go back to the start of the retention period and
 	    // select next bucket.
-	    lastKeyBundleTag =
-	        now.minusDays(retentionDays).roundToNextBucket(releaseBucketDuration).getTimestamp();
+		  syncStateService.setLastUploadKeyBundleTag(
+	        now.minusDays(retentionDays).roundToNextBucket(releaseBucketDuration).getTimestamp());
 	  }
-	  var keysSince = UTCInstant.ofEpochMillis(lastKeyBundleTag);
+	  var keysSince = UTCInstant.ofEpochMillis(syncStateService.getLastUploadKeyBundleTag());
 	
-	  UTCInstant keyBundleTag = now.roundToBucketStart(releaseBucketDuration);
-	
-	  List<GaenKey> exposedKeys =
-			  gaenDataService.getSortedExposedSince(keysSince, now, null);
-	
+	  List<GaenKeyInterop> exposedKeys = Lists.newArrayList();
+	  int multiplier = 2;
+	  UTCInstant till = now;
+	  do {		  
+		  exposedKeys = gaenDataService.getSortedExposedSinceForInterop(keysSince, till);	
+		  till = now.minus(releaseBucketDuration.multipliedBy(multiplier++));		  
+	  } while (exposedKeys.size() > this.efgsMaxUploadKeys);
+	  UTCInstant keyBundleTag = till.roundToBucketStart(releaseBucketDuration);
+	  
 	  if (exposedKeys.isEmpty()) {
-		  
+		  logger.info("No keys to upload");
+		  return;
 	  }
 	  
-	  lastUploadKeyBundleTag = keyBundleTag.getTimestamp();
+	  List<EfgsProto.DiagnosisKey> diagnosisKeys = exposedKeys.stream().map(ek -> {
+		  
+		  return EfgsProto.DiagnosisKey.newBuilder()
+		  	.setKeyData(ByteString.copyFrom(java.util.Base64.getDecoder().decode(ek.getKeyData())))
+		  	.setRollingStartIntervalNumber(ek.getRollingStartNumber())
+		  	.setRollingPeriod(ek.getRollingPeriod())
+		  	.setTransmissionRiskLevel(ek.getTransmissionRiskLevel())
+		  	.addAllVisitedCountries(ek.getVisitedCountries())
+		  	.setOrigin(this.originCountry)
+		  	.setReportType(ReportType.CONFIRMED_TEST)
+		  	.setDaysSinceOnsetOfSymptoms(ek.getDaysSinceOnsetOfSymptoms())
+		  	.build();			  	
+		  
+	  }).collect(Collectors.toList());   
+	  
+	  EfgsProto.DiagnosisKeyBatch batch = EfgsProto.DiagnosisKeyBatch.newBuilder()
+	  	.addAllKeys(diagnosisKeys)
+	  	.build();
+	  
+	  byte[] batchBytes = BatchSignatureUtils.generateBytes(batch);
+	  String signature = signatureGenerator.sign(batchBytes);
+	  
+        UriComponentsBuilder builder =
+                UriComponentsBuilder.fromHttpUrl(baseUrl + UPLOAD_PATH);
+            URI uri = builder.build().toUri();
+            logger.info("Uploading Diagnosis Key Batch with to: " + uri.toString() + ". BatchTag: " + String.valueOf(keyBundleTag.get10MinutesSince1970()));
+            
+            RequestEntity<byte[]> request =
+                RequestEntity.post(builder.build().toUri())
+                	.contentType(MediaType.parseMediaType("application/protobuf; version=1.0"))
+                    .headers(createUploadHeaders(keyBundleTag, signature))
+                    .body(batch.toByteArray());
+            
+            ResponseEntity<String> response =
+            		restTemplate.exchange(request, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+            	if (response.getStatusCode().equals(HttpStatus.CREATED)) {
+            		syncStateService.setLastUploadKeyBundleTag(keyBundleTag.getTimestamp());
+            		logger.info("Upload successful. BatchTag: " + response.getHeaders().getOrEmpty("batchTag"));
+            	}
+            	if (response.getStatusCodeValue() == 207) {
+            		logger.warn("The upload was only partially successful. Response: " + response.getBody());
+            	}
+            } else {
+            	logger.error("Upload failed with code " + response.getStatusCodeValue() + " and message " + response.getBody());
+            }
 	  
   }
   
@@ -142,7 +184,7 @@ public class EfgsSyncer {
     logger.info("Start download: " + endDate + " - " + today);
     List<EfgsProto.DiagnosisKey> receivedKeys = new ArrayList<>();
     while (dayDate.isBefore(today.plusDays(1))) {
-      String lastBatchTagForDay = lastBatchTag.get(dayDate);
+      String lastBatchTagForDay = syncStateService.getLastDownloadedBatchTag(dayDate);
       logger.info(
           "Download keys for: "
               + dayDate
@@ -186,12 +228,12 @@ public class EfgsSyncer {
             if ("null".equals(nextBatchTag)) {
                 logger.info("Got empty nextBatchTag. Store last batch tag");
                 // no more keys to load. store last batch tag for next sync
-                this.lastBatchTag.put(dayDate, currentBatchTagForDay);
+                this.syncStateService.setLastDownloadedBatchTag(dayDate, currentBatchTagForDay);
             	done = true;
             } else if (receivedKeys.size() >= efgsMaxDownloadKeys) {
                 logger.info("Exceeded efgsMaxDownloadKeys. Stopping download");
                 // no more keys to load. store last batch tag for next sync
-                this.lastBatchTag.put(dayDate, "null".equals(nextBatchTag) ? currentBatchTagForDay : nextBatchTag);
+                this.syncStateService.setLastDownloadedBatchTag(dayDate, "null".equals(nextBatchTag) ? currentBatchTagForDay : nextBatchTag);
             	done = true;            	
             	dayDate = today.plusDays(1);
             } else {
@@ -224,6 +266,13 @@ public class EfgsSyncer {
     gaenKey.setRollingStartNumber(diagKey.getRollingStartIntervalNumber());
     return gaenKey;
   }
+
+  private HttpHeaders createUploadHeaders(UTCInstant batchTag, String signature) {
+	    HttpHeaders headers = new HttpHeaders();
+        headers.add("batchTag", String.valueOf(batchTag.get10MinutesSince1970()));    	
+        headers.add("batchSignature", signature);
+	    return headers;
+	  }
 
   private HttpHeaders createDownloadHeaders(String batchTag) {
     HttpHeaders headers = new HttpHeaders();

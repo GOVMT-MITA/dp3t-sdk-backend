@@ -39,6 +39,8 @@ import org.dpppt.backend.sdk.data.gaen.GAENDataService;
 import org.dpppt.backend.sdk.data.gaen.JDBCGAENDataServiceImpl;
 import org.dpppt.backend.sdk.interops.batchsigning.SignatureGenerator;
 import org.dpppt.backend.sdk.interops.syncer.EfgsSyncer;
+import org.dpppt.backend.sdk.interops.syncer.InMemorySyncStateService;
+import org.dpppt.backend.sdk.interops.syncer.SyncStateService;
 import org.dpppt.backend.sdk.interops.utils.LoggingRequestInterceptor;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
@@ -51,11 +53,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpRequest;
+import org.springframework.http.client.BufferingClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.protobuf.ProtobufHttpMessageConverter;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
@@ -104,8 +108,11 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	@Value("${ws.interops.efgs.maxage: 2}")
 	int efgsMaxAgeDays;
 	
-	@Value("${ws.interops.efgs.maxage: 8000}")
+	@Value("${ws.interops.efgs.download.maxkeys: 8000}")
 	long efgsMaxDownloadKeys;
+
+	@Value("${ws.interops.efgs.upload.maxkeys: 2}")
+	long efgsMaxUploadKeys;
 
 	protected final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -122,8 +129,23 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	}
 
 	@Bean
-	public EfgsSyncer efgsSyncer(GAENDataService gaenDataService, RestTemplate restTemplate, SignatureGenerator signatureGenerator) throws Exception {
-		return new EfgsSyncer(efgsBaseUrl, retentionDays, efgsMaxAgeDays, efgsMaxDownloadKeys, Duration.ofMillis(releaseBucketDuration), gaenDataService, restTemplate, signatureGenerator);
+	public SyncStateService syncStateService() {
+		return new InMemorySyncStateService();
+	}
+	
+	@Bean
+	public EfgsSyncer efgsSyncer(GAENDataService gaenDataService, RestTemplate restTemplate, SignatureGenerator signatureGenerator, SyncStateService syncStateService) throws Exception {
+		return new EfgsSyncer(efgsBaseUrl, 
+				retentionDays, 
+				efgsMaxAgeDays, 
+				efgsMaxDownloadKeys, 
+				efgsMaxUploadKeys, 
+				originCountry, 
+				Duration.ofMillis(releaseBucketDuration), 
+				gaenDataService, 
+				restTemplate, 
+				signatureGenerator,
+				syncStateService);
 	}
 
 	@Autowired
@@ -160,7 +182,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 		
 		RestTemplate rt = builder
 				.requestFactory(s1)
-				.messageConverters(hmc)
+				.messageConverters(hmc, new ByteArrayHttpMessageConverter())
 				.build();
 		
 		List<ClientHttpRequestInterceptor> interceptors = rt.getInterceptors();
@@ -171,7 +193,9 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 					throws IOException {
 				ClientHttpResponse response = execution.execute(request, body);				
 		        response.getHeaders().set("Content-Type", "application/x-protobuf");
-		        return response;			}
+		        return response;			
+		    }
+			
 			
 		});
 		interceptors.add(new LoggingRequestInterceptor());
@@ -201,6 +225,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
             .register("https", sslSocketFactory)
             .build();
         final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager(registry);
+
         connectionManager.setMaxTotal(30);
         connectionManager.setDefaultMaxPerRoute(20);
         return HttpClients.custom()

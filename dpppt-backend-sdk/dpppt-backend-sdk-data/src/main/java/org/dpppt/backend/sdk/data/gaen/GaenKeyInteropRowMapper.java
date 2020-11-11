@@ -8,7 +8,7 @@ import org.dpppt.backend.sdk.model.gaen.GaenKey;
 import org.dpppt.backend.sdk.model.gaen.GaenKeyInterop;
 import org.springframework.jdbc.core.RowMapper;
 
-public class GaenKeyWithRegionsRowMapper implements RowMapper<GaenKeyInterop> {
+public class GaenKeyInteropRowMapper implements RowMapper<GaenKeyInterop> {
 
   @Override
   public GaenKeyInterop mapRow(ResultSet rs, int rowNum) throws SQLException {
@@ -16,7 +16,7 @@ public class GaenKeyWithRegionsRowMapper implements RowMapper<GaenKeyInterop> {
     gaenKey.setKeyData(rs.getString("key"));
     gaenKey.setRollingStartNumber(rs.getInt("rolling_start_number"));
     gaenKey.setRollingPeriod(rs.getInt("rolling_period"));
-    gaenKey.setRegions(List.of(rs.getString("country")));
+    gaenKey.setVisitedCountries(List.of(rs.getString("country")));
     return gaenKey;
   }
 }
