@@ -148,10 +148,10 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     	finalKeys.add(groupedKeys.get(k).stream().reduce(null, (o, n) -> {
     		if (null == o) {
     			return n;
-    		} else {
-    			o.getCountries().addAll(n.getCountries());
-    			return o;
-    		}    		
+    		}
+    		o.getCountries().addAll(n.getCountries());
+    		return o;
+    		
     	}));
     });
     return finalKeys;

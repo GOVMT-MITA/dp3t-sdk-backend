@@ -11,6 +11,7 @@
 package org.dpppt.backend.sdk.ws.security.gaen;
 
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.model.gaen.GaenUnit;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.dpppt.backend.sdk.ws.security.ValidateRequest;
@@ -40,8 +41,8 @@ public class JWTValidateRequest implements ValidateRequest {
     if (authObject instanceof Jwt) {
       Jwt token = (Jwt) authObject;
       var jwtKeyDate = UTCInstant.parseDate(token.getClaim("onset"));
-      if (others instanceof GaenKey) {
-        GaenKey request = (GaenKey) others;
+      if (others instanceof GaenKeyInternal) {
+    	  GaenKeyInternal request = (GaenKeyInternal) others;
         var keyDate = UTCInstant.of(request.getRollingStartNumber(), GaenUnit.TenMinutes);
         if (keyDate.isBeforeEpochMillisOf(jwtKeyDate)) {
           throw new ClaimIsBeforeOnsetException();

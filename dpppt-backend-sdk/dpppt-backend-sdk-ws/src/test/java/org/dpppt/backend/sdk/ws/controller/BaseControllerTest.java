@@ -302,7 +302,7 @@ public abstract class BaseControllerTest {
     }
 
     result =
-        gaenDataService.getSortedExposedForKeyDate(
+        gaenDataService.getSortedExposedForKeyDate(  
             now.atStartOfDay().minusDays(1),
             null,
             now.roundToBucketStart(releaseBucketDuration),

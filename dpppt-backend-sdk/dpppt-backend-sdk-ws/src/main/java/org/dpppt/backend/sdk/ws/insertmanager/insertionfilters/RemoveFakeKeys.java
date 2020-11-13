@@ -20,6 +20,6 @@ public class RemoveFakeKeys implements KeyInsertionFilter {
       Version osVersion,
       Version appVersion,
       Object principal) {
-    return content.stream().filter(key -> key.getFake().equals(0)).collect(Collectors.toList());
+    return content.stream().filter(key -> key.getFake() == 0).collect(Collectors.toList());
   }
 }

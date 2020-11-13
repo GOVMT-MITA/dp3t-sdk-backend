@@ -81,7 +81,8 @@ public class GaenKeyInternal {
 		this.setKeyData(gaenKey.getKeyData());
 		this.setRollingStartNumber(gaenKey.getRollingStartNumber());
 		this.setRollingPeriod(gaenKey.getRollingPeriod());
-		this.setTransmissionRiskLevel(gaenKey.getTransmissionRiskLevel());		
+		this.setTransmissionRiskLevel(gaenKey.getTransmissionRiskLevel());
+		this.setFake(gaenKey.getFake());
 	}
 	
 	public GaenKey asGaenKey() {

@@ -18,6 +18,8 @@ import org.dpppt.backend.sdk.model.gaen.GaenKey;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 public class TestJDBCGaen {
@@ -60,12 +62,16 @@ public class TestJDBCGaen {
   @Transactional(readOnly = false)
   public void upsertExposees(List<GaenKey> gaenKeys, UTCInstant receivedAt) {
     String sql = null;
+    String sqlVisited = null;
     if (dbType.equals(PGSQL)) {
       sql =
           "insert into t_gaen_exposed (key, rolling_start_number, rolling_period,"
               + " received_at, origin) values (:key, :rolling_start_number,"
               + " :rolling_period, :received_at, :origin) on conflict on"
               + " constraint gaen_exposed_key do nothing";
+      sqlVisited =
+              "insert into t_visited (pfk_exposed_id, country) values (:keyId, :country) on conflict on"
+                  + " constraint PK_t_visited do nothing";
     } else {
       sql =
           "merge into t_gaen_exposed using (values(cast(:key as varchar(24)),"
@@ -74,6 +80,11 @@ public class TestJDBCGaen {
               + " origin) on t_gaen_exposed.key = vals.key when not matched then insert (key,"
               + " rolling_start_number, rolling_period, received_at, origin) values (vals.key,"
               + " vals.rolling_start_number, vals.rolling_period, vals.received_at, vals.origin)";
+      sqlVisited =
+              "merge into t_visited using (values(:keyId, :country)) as vals(keyId, country) on"
+                  + " t_visited.pfk_exposed_id = vals.keyId and t_visited.country = vals.country when"
+                  + " not matched then insert (pfk_exposed_id, country) values (vals.keyId,"
+                  + " vals.country)";
     }
     var parameterList = new ArrayList<MapSqlParameterSource>();
     for (var gaenKey : gaenKeys) {
@@ -84,6 +95,17 @@ public class TestJDBCGaen {
       params.addValue("received_at", receivedAt.getDate());
       params.addValue("origin", "CH");
       parameterList.add(params);
+      KeyHolder keyHolder = new GeneratedKeyHolder();
+      jt.update(sql, params, keyHolder);
+      Object keyObject = keyHolder.getKeys().get("pk_exposed_id");
+      if (keyObject != null) {
+          int gaenKeyId = ((Integer) keyObject).intValue();
+          MapSqlParameterSource visitedParams = new MapSqlParameterSource();
+          visitedParams.addValue("keyId", gaenKeyId);
+          visitedParams.addValue("country", "CH");
+          jt.update(sqlVisited, visitedParams);
+        }
+      
     }
     jt.batchUpdate(sql, parameterList.toArray(new MapSqlParameterSource[0]));
   }

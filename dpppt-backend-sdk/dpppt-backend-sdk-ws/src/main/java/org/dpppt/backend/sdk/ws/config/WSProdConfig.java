@@ -154,6 +154,9 @@ public class WSProdConfig extends WSBaseConfig {
     @Value("${ws.exposedlist.debug.requestTime: 1500}")
     long requestTime;
 
+    @Value("${ws.origin.country}")
+    String originCountry;
+    
     @Autowired KeyVault keyVault;
     @Autowired Flyway flyway;
     @Autowired DataSource dataSource;
@@ -178,7 +181,7 @@ public class WSProdConfig extends WSBaseConfig {
       } else if (isDev()) {
         dbType = "hsqldb";
       }
-      return new DebugJDBCGAENDataServiceImpl(dbType, dataSource);
+      return new DebugJDBCGAENDataServiceImpl(dbType, originCountry, dataSource);
     }
 
     @Bean

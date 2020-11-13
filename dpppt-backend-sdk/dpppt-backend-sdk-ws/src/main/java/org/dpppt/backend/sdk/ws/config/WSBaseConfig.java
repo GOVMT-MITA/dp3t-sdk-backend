@@ -303,15 +303,14 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
   }
 
   @Bean
-  public GaenController gaenController(@Qualifier("insertManagerExposed") InsertManager insertManagerExposed,
-		  @Qualifier("insertManagerExposedNextDay") InsertManager insertManagerExposedNextDay) {
+  public GaenController gaenController() {
     ValidateRequest theValidator = gaenRequestValidator;
     if (theValidator == null) {
       theValidator = backupValidator();
     }
     return new GaenController(
-        insertManagerExposed,
-        insertManagerExposedNextDay,
+        insertManagerExposed(),
+        insertManagerExposedNextDay(),
         gaenDataService(),
         fakeKeyService(),
         theValidator,

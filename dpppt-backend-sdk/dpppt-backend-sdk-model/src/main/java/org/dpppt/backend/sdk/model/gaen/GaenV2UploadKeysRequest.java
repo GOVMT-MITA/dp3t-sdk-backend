@@ -11,7 +11,6 @@ import javax.validation.constraints.Size;
 
 public class GaenV2UploadKeysRequest {
 
-  @NotEmpty
   @Valid
   @Documentation(
       description =

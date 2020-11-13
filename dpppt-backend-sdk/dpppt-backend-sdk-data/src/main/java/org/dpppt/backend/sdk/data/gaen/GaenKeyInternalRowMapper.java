@@ -2,6 +2,7 @@ package org.dpppt.backend.sdk.data.gaen;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
@@ -15,8 +16,10 @@ public class GaenKeyInternalRowMapper implements RowMapper<GaenKeyInternal> {
     var gaenKey = new GaenKeyInternal();
     gaenKey.setKeyData(rs.getString("key"));
     gaenKey.setRollingStartNumber(rs.getInt("rolling_start_number"));
-    gaenKey.setRollingPeriod(rs.getInt("rolling_period"));    
-    gaenKey.setCountries(List.of(rs.getString("country")));
+    gaenKey.setRollingPeriod(rs.getInt("rolling_period"));
+    List<String> countries = new ArrayList<>();
+    countries.add(rs.getString("country"));
+    gaenKey.setCountries(countries);
     gaenKey.setFake(0);
     gaenKey.setTransmissionRiskLevel(0);
     gaenKey.setDaysSinceOnsetOfSymptoms(rs.getInt("days_since_onset_of_symptoms"));

@@ -2,6 +2,7 @@ package org.dpppt.backend.sdk.ws.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.security.InvalidKeyException;
@@ -10,11 +11,14 @@ import java.security.SignatureException;
 import java.time.Duration;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 import org.dpppt.backend.sdk.data.gaen.DebugGAENDataService;
 import org.dpppt.backend.sdk.model.gaen.DayBuckets;
+import org.dpppt.backend.sdk.model.gaen.GaenKey;
 import org.dpppt.backend.sdk.model.gaen.GaenRequest;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.dpppt.backend.sdk.ws.insertmanager.InsertException;
@@ -99,11 +103,16 @@ public class DebugController {
       return ResponseEntity.notFound().build();
     }
 
-    var exposedKeys =
+    var exposedKeysInternal =
         dataService.getSortedExposedForBatchReleaseTime(
             UTCInstant.ofEpochMillis(batchReleaseTime), releaseBucketDuration);
     
-    byte[] payload = null; // gaenSigner.getPayload(exposedKeys);
+    Map<String,List<GaenKey>> exposedKeys = Maps.newHashMap();
+    exposedKeysInternal.entrySet().forEach(e -> {
+    	exposedKeys.put(e.getKey(), e.getValue().stream().map(k -> k.asGaenKey()).collect(Collectors.toList()));
+    });
+    		
+    byte[] payload = gaenSigner.getPayload(exposedKeys);
 
     return ResponseEntity.ok()
         .header("X-BATCH-RELEASE-TIME", Long.toString(batchReleaseTimeDuration.toMillis()))

@@ -29,12 +29,15 @@ public class DebugJDBCGAENDataServiceImpl implements DebugGAENDataService {
   private static final Logger logger = LoggerFactory.getLogger(DebugJDBCGAENDataServiceImpl.class);
 
   private static final String PGSQL = "pgsql";
+  
   private final String dbType;
+  private final String originCountry;
   private final NamedParameterJdbcTemplate jt;
 
-  public DebugJDBCGAENDataServiceImpl(String dbType, DataSource dataSource) {
+  public DebugJDBCGAENDataServiceImpl(String dbType, String originCountry, DataSource dataSource) {
     this.dbType = dbType;
-    this.jt = new NamedParameterJdbcTemplate(dataSource);
+    this.originCountry = originCountry;
+    this.jt = new NamedParameterJdbcTemplate(dataSource);    
   }
 
   @Override
@@ -76,7 +79,9 @@ public class DebugJDBCGAENDataServiceImpl implements DebugGAENDataService {
       UTCInstant batchReleaseTime, Duration releaseBucketDuration) {
     String sql =
         "select pk_exposed_id, device_name, key, rolling_start_number, rolling_period,"
-            + " transmission_risk_level from t_debug_gaen_exposed where received_at >= :startBatch"
+            + " transmission_risk_level, '" + originCountry + "' as country, '" + originCountry + "' as origin, "
+            + " 'CONFIRMED_TEST' as report_type, 14 as days_since_onset_of_symptoms"
+            + " from t_debug_gaen_exposed where received_at >= :startBatch"
             + " and received_at < :batchReleaseTime order by pk_exposed_id desc";
     MapSqlParameterSource params = new MapSqlParameterSource();
     params.addValue("batchReleaseTime", batchReleaseTime.getDate());

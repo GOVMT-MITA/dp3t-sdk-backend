@@ -97,13 +97,13 @@ public class GaenDataServiceTest {
     tmpKey2.setFake(0);
     tmpKey2.setTransmissionRiskLevel(0);
     tmpKey2.setOrigin("CH");
-    tmpKey2.setCountries(List.of("CH"));
+    tmpKey2.setCountries(List.of("CH","IE","DE"));
     List<GaenKeyInternal> keys = List.of(tmpKey, tmpKey2);
     var now = UTCInstant.now();
     gaenDataService.upsertExposees(keys, now);
 
     var returnedKeys =
-        gaenDataService.getSortedExposedSince(now.minusDays(10), now.plusDays(1), true);
+        gaenDataService.getSortedExposedSince(now.minusDays(10), now.plusDays(1), false);
 
     assertEquals(keys.size(), returnedKeys.size());
     assertEquals(keys.get(1).getKeyData(), returnedKeys.get(0).getKeyData());

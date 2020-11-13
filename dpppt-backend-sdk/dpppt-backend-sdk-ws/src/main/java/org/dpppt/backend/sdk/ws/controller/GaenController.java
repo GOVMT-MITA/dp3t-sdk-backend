@@ -192,6 +192,7 @@ public class GaenController {
               .setSubject(originalJWT.getSubject())
               .setExpiration(now.plusDays(2).getDate())
               .claim("scope", "currentDayExposed")
+              .claim("onset", originalJWT.getClaimAsString("onset"))
               .claim("delayedKeyDate", gaenRequest.getDelayedKeyDate());
       if (originalJWT.containsClaim("fake")) {
         jwtBuilder.claim("fake", originalJWT.getClaim("fake"));
