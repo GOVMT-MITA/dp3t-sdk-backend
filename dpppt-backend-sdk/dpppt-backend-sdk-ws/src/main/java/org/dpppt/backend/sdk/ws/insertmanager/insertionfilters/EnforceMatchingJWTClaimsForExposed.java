@@ -3,6 +3,7 @@ package org.dpppt.backend.sdk.ws.insertmanager.insertionfilters;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.semver.Version;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.dpppt.backend.sdk.ws.insertmanager.OSType;
@@ -24,9 +25,10 @@ public class EnforceMatchingJWTClaimsForExposed implements KeyInsertionFilter {
   }
 
   @Override
-  public List<GaenKey> filter(
+  public List<GaenKeyInternal> filter(
       UTCInstant now,
-      List<GaenKey> content,
+      List<GaenKeyInternal> content,
+      List<String> countries,
       OSType osType,
       Version osVersion,
       Version appVersion,
@@ -36,7 +38,7 @@ public class EnforceMatchingJWTClaimsForExposed implements KeyInsertionFilter {
         .collect(Collectors.toList());
   }
 
-  private boolean isValidKeyDate(GaenKey key, Object principal, UTCInstant now) {
+  private boolean isValidKeyDate(GaenKeyInternal key, Object principal, UTCInstant now) {
     try {
       validateRequest.validateKeyDate(now, principal, key);
       return true;

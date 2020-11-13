@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ public class FakeKeyService {
   private final Integer keySize;
   private final Duration retentionPeriod;
   private final boolean isEnabled;
+  private final String originCountry;
 
   private static final Logger logger = LoggerFactory.getLogger(FakeKeyService.class);
 
@@ -27,7 +29,8 @@ public class FakeKeyService {
       Integer minNumOfKeys,
       Integer keySize,
       Duration retentionPeriod,
-      boolean isEnabled)
+      boolean isEnabled,
+      String originCountry)
       throws NoSuchAlgorithmException {
     this.dataService = dataService;
     this.minNumOfKeys = minNumOfKeys;
@@ -35,6 +38,7 @@ public class FakeKeyService {
     this.keySize = keySize;
     this.retentionPeriod = retentionPeriod;
     this.isEnabled = isEnabled;
+    this.originCountry = originCountry;
     this.updateFakeKeys();
   }
 
@@ -44,16 +48,23 @@ public class FakeKeyService {
     var tmpDate = currentKeyDate.minusDays(retentionPeriod.toDays()).atStartOfDay();
     logger.debug("Fill Fake keys. Start: " + currentKeyDate + " End: " + tmpDate);
     do {
-      var keys = new ArrayList<GaenKey>();
+      var keys = new ArrayList<GaenKeyInternal>();
       for (int i = 0; i < minNumOfKeys; i++) {
         byte[] keyData = new byte[keySize];
         random.nextBytes(keyData);
         var keyGAENTime = (int) tmpDate.get10MinutesSince1970();
-        var key = new GaenKey(Base64.getEncoder().encodeToString(keyData), keyGAENTime, 144);
+        var key = new GaenKeyInternal();
+        key.setKeyData(Base64.getEncoder().encodeToString(keyData));
+        key.setRollingStartNumber(keyGAENTime);
+        key.setRollingPeriod(144);
+        key.setOrigin(originCountry);
+        key.setReportType("CONFIRMED_TEST");
+        key.setDaysSinceOnsetOfSymptoms(retentionPeriod.toDays());
+        key.setCountries(List.of(originCountry));
         keys.add(key);
       }
       // TODO: Check if currentKeyDate is indeed intended here
-      this.dataService.upsertExposees(keys, currentKeyDate, null);
+      this.dataService.upsertExposees(keys, currentKeyDate);
       tmpDate = tmpDate.plusDays(1);
     } while (tmpDate.isBeforeDateOf(currentKeyDate));
   }
@@ -63,8 +74,8 @@ public class FakeKeyService {
     this.dataService.cleanDB(Duration.ofDays(0));
   }
 
-  public List<GaenKey> fillUpKeys(
-      List<GaenKey> keys, UTCInstant publishedafter, UTCInstant keyDate, UTCInstant now) {
+  public List<GaenKeyInternal> fillUpKeys(
+      List<GaenKeyInternal> keys, UTCInstant publishedafter, UTCInstant keyDate, UTCInstant now) {
     if (!isEnabled) {
       return keys;
     }
@@ -75,7 +86,7 @@ public class FakeKeyService {
     }
     var fakeKeys =
         this.dataService.getSortedExposedForKeyDate(
-            keyDate, publishedafter, UTCInstant.today().plusDays(1), now);
+            keyDate, publishedafter, UTCInstant.today().plusDays(1), now, false);
 
     keys.addAll(fakeKeys);
     return keys;

@@ -3,6 +3,7 @@ package org.dpppt.backend.sdk.ws.insertmanager.insertionfilters;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.semver.Version;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.dpppt.backend.sdk.ws.insertmanager.OSType;
@@ -11,9 +12,10 @@ import org.dpppt.backend.sdk.ws.insertmanager.OSType;
 public class RemoveFakeKeys implements KeyInsertionFilter {
 
   @Override
-  public List<GaenKey> filter(
+  public List<GaenKeyInternal> filter(
       UTCInstant now,
-      List<GaenKey> content,
+      List<GaenKeyInternal> content,
+      List<String> countries,
       OSType osType,
       Version osVersion,
       Version appVersion,

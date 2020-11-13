@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 import javax.sql.DataSource;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
-import org.dpppt.backend.sdk.model.gaen.GaenKeyInterop;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +49,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
   // these are all other countries that are connected to the system. if requests must include all
   // international keys, then this list is added to the origin country.
   private final List<String> allOtherCountries;
-
+  
   public JDBCGAENDataServiceImpl(
       String dbType,
       DataSource dataSource,
@@ -66,52 +66,55 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
   }
 
   @Override
-  public void upsertExposeeFromInterops(
-      GaenKey gaenKey, UTCInstant now, String origin, List<String> countries) {
-    internalUpsertKey(gaenKey, now, origin, countries);
+  public void upsertExposee(
+      GaenKeyInternal gaenKey, UTCInstant now) {
+    internalUpsertKey(gaenKey, now);
   }
 
   @Override
   @Transactional(readOnly = false)
-  public void upsertExposees(List<GaenKey> gaenKeys, UTCInstant now, List<String> countries) {
-    upsertExposeesDelayed(gaenKeys, null, now, countries);
+  public void upsertExposees(List<GaenKeyInternal> gaenKeys, UTCInstant now) {
+    upsertExposeesDelayed(gaenKeys, null, now);
   }
 
   @Override
   @Transactional(readOnly = false)
   public void upsertExposeesDelayed(
-      List<GaenKey> gaenKeys, UTCInstant delayedReceivedAt, UTCInstant now, List<String> countries) {
+      List<GaenKeyInternal> gaenKeys, UTCInstant delayedReceivedAt, UTCInstant now) {
     // Calculate the `receivedAt` just at the end of the current releaseBucket.
     var receivedAt =
         delayedReceivedAt == null
             ? now.roundToNextBucket(releaseBucketDuration).minus(Duration.ofMillis(1))
             : delayedReceivedAt;
 
-    // origin country is always included
-    List<String> forCountries = new ArrayList<String>();
-    forCountries.add(this.originCountry);
-    if (null != countries) {
-    	forCountries.addAll(countries);
-    }
     for (var gaenKey : gaenKeys) {
-      internalUpsertKey(gaenKey, receivedAt, this.originCountry, forCountries);
+      internalUpsertKey(gaenKey, receivedAt);
     }
   }
 
   @Override
   @Transactional(readOnly = true)
-  public List<GaenKey> getSortedExposedForKeyDate(
-      UTCInstant keyDate, UTCInstant publishedAfter, UTCInstant publishedUntil, UTCInstant now) {
+  public List<GaenKeyInternal> getSortedExposedForKeyDate(
+      UTCInstant keyDate, UTCInstant publishedAfter, UTCInstant publishedUntil, UTCInstant now, boolean international) {
     MapSqlParameterSource params = new MapSqlParameterSource();
     params.addValue("rollingPeriodStartNumberStart", keyDate.get10MinutesSince1970());
     params.addValue("rollingPeriodStartNumberEnd", keyDate.plusDays(1).get10MinutesSince1970());
     params.addValue("publishedUntil", publishedUntil.getDate());
-
+	List<String> forCountries = List.of(originCountry);
+	if (international)
+		forCountries.addAll(allOtherCountries);
+    params.addValue("origins", forCountries);
+    params.addValue("countries", forCountries);
+    
     String sql =
-        "select pk_exposed_id, key, rolling_start_number, rolling_period"
-            + " from t_gaen_exposed where rolling_start_number >= :rollingPeriodStartNumberStart"
-            + " and rolling_start_number < :rollingPeriodStartNumberEnd and received_at <"
-            + " :publishedUntil";
+        "select keys.pk_exposed_id, keys.key, keys.rolling_start_number, keys.rolling_period, "
+    		+ " keys.report_type, keys.days_since_onset_of_symptoms, keys.origin, v.country"
+            + " from t_gaen_exposed "
+            + " as keys inner join t_visited v on keys.pk_exposed_id = v.pfk_exposed_id"
+        	+ " where keys.rolling_start_number >= :rollingPeriodStartNumberStart"
+            + " and keys.rolling_start_number < :rollingPeriodStartNumberEnd and keys.received_at <"
+            + " :publishedUntil and"
+            + " (v.country in (:countries) OR keys.origin in (:origins))";
     // we need to subtract the time skew since we want to release it iff rolling_start_number +
     // rolling_period + timeSkew < NOW
     // note though that since we use `<` instead of `<=` a key which is valid until 24:00 will be
@@ -131,69 +134,82 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 
     sql += " order by pk_exposed_id desc";
 
-    return jt.query(sql, params, new GaenKeyRowMapper());
+    List<GaenKeyInternal> keys = jt.query(sql, params, new GaenKeyInternalRowMapper());
+    
+    return aggregateByCountry(keys);
+    
+  }
+
+  private List<GaenKeyInternal> aggregateByCountry(List<GaenKeyInternal> keys) {
+	Map<String, List<GaenKeyInternal>> groupedKeys = keys.stream().collect(Collectors.groupingBy(GaenKeyInternal::getKeyData));
+    
+    final List<GaenKeyInternal> finalKeys = new ArrayList<>(); 
+    groupedKeys.keySet().forEach(k -> {
+    	finalKeys.add(groupedKeys.get(k).stream().reduce(null, (o, n) -> {
+    		if (null == o) {
+    			return n;
+    		} else {
+    			o.getCountries().addAll(n.getCountries());
+    			return o;
+    		}    		
+    	}));
+    });
+    return finalKeys;
+}
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<GaenKeyInternal> getSortedExposedSince(UTCInstant keysSince, UTCInstant now, String origin) {
+	
+	    MapSqlParameterSource params = new MapSqlParameterSource();
+	    params.addValue("since", keysSince.getDate());
+	    params.addValue("maxBucket", now.roundToBucketStart(releaseBucketDuration).getDate());
+	    params.addValue("timeSkewSeconds", timeSkew.toSeconds());
+	    params.addValue("origin", origin);
+
+	    // Select keys since the given date. We need to make sure, only keys are returned
+	    // that are allowed to be published.
+	    // For this, we calculate the expiry for each key in a sub query. The expiry is then used for
+	    // the where clause:
+	    // - if expiry <= received_at: the key was ready to publish when we received it. Release this
+	    // key, if received_at in [since, maxBucket)
+	    // - if expiry > received_at: we have to wait until expiry till we can release this key. This
+	    // means we only release the key if expiry in [since, maxBucket)
+	    // This problem arises, because we only want key with received_at after since, but we need to
+	    // ensure that we relase ALL keys meaning keys which were still valid when they were received
+
+	    // we need to add the time skew to calculate the expiry timestamp of a key:
+	    // TO_TIMESTAMP((rolling_start_number + rolling_period) * 10 * 60 + :timeSkewSeconds
+
+	    String sql =
+	        "select keys.pk_exposed_id, keys.key, keys.rolling_start_number,"
+	            + " keys.rolling_period, keys.origin, keys.days_since_onset_of_symptoms, keys.report_type, v.country"
+	        	+ " from (select pk_exposed_id, key, rolling_start_number,"
+	            + " rolling_period, received_at,  "
+	            + getSQLExpressionForExpiry()
+	            + " as expiry, days_since_onset_of_symptoms, report_type, origin from t_gaen_exposed)"
+	            + " as keys inner join t_visited v on keys.pk_exposed_id = v.pfk_exposed_id"
+	            + " where keys.origin = :origin and ((keys.received_at >= :since AND"
+	            + " keys.received_at < :maxBucket AND keys.expiry <= keys.received_at) OR (keys.expiry"
+	            + " >= :since AND keys.expiry < :maxBucket AND keys.expiry > keys.received_at))";
+
+	    sql += " order by keys.pk_exposed_id desc";
+
+	    List<GaenKeyInternal> keys = jt.query(sql, params, new GaenKeyInternalRowMapper());
+	    return aggregateByCountry(keys);
+
   }
 
   @Override
   @Transactional(readOnly = true)
-  public List<GaenKey> getSortedExposedSince(
-      UTCInstant keysSince, UTCInstant now, List<String> visitedCountries) {
+  public List<GaenKeyInternal> getSortedExposedSince(
+      UTCInstant keysSince, UTCInstant now, List<String> countries) {
     MapSqlParameterSource params = new MapSqlParameterSource();
     params.addValue("since", keysSince.getDate());
     params.addValue("maxBucket", now.roundToBucketStart(releaseBucketDuration).getDate());
     params.addValue("timeSkewSeconds", timeSkew.toSeconds());
-
-    // origin country is always included
-    List<String> forCountries = new ArrayList<>();
-    forCountries.add(originCountry);
-    if (null != visitedCountries) {
-      forCountries.addAll(visitedCountries);
-    }
-    params.addValue("countries", forCountries);
-
-    // Select keys since the given date. We need to make sure, only keys are returned
-    // that are allowed to be published.
-    // For this, we calculate the expiry for each key in a sub query. The expiry is then used for
-    // the where clause:
-    // - if expiry <= received_at: the key was ready to publish when we received it. Release this
-    // key, if received_at in [since, maxBucket)
-    // - if expiry > received_at: we have to wait until expiry till we can release this key. This
-    // means we only release the key if expiry in [since, maxBucket)
-    // This problem arises, because we only want key with received_at after since, but we need to
-    // ensure that we relase ALL keys meaning keys which were still valid when they were received
-
-    // we need to add the time skew to calculate the expiry timestamp of a key:
-    // TO_TIMESTAMP((rolling_start_number + rolling_period) * 10 * 60 + :timeSkewSeconds
-
-    String sql =
-        "select distinct keys.pk_exposed_id, keys.key, keys.rolling_start_number,"
-            + " keys.rolling_period from (select pk_exposed_id, key, rolling_start_number,"
-            + " rolling_period, received_at,  "
-            + getSQLExpressionForExpiry()
-            + " as expiry from t_gaen_exposed)"
-            + " as keys inner join t_visited v on keys.pk_exposed_id = v.pfk_exposed_id"
-            + " where v.country in (:countries) and ((keys.received_at >= :since AND"
-            + " keys.received_at < :maxBucket AND keys.expiry <= keys.received_at) OR (keys.expiry"
-            + " >= :since AND keys.expiry < :maxBucket AND keys.expiry > keys.received_at))";
-
-    sql += " order by keys.pk_exposed_id desc";
-
-    return jt.query(sql, params, new GaenKeyRowMapper());
-  }
-
-  
-  @Transactional(readOnly = true)
-  public List<GaenKeyInterop> getSortedExposedSinceForInterop(
-      UTCInstant keysSince, UTCInstant now) {
-    MapSqlParameterSource params = new MapSqlParameterSource();
-    params.addValue("since", keysSince.getDate());
-    params.addValue("maxBucket", now.roundToBucketStart(releaseBucketDuration).getDate());
-    params.addValue("timeSkewSeconds", timeSkew.toSeconds());
-
-    // origin country is always included
-    List<String> forCountries = new ArrayList<>();
-    forCountries.add(originCountry);
-    params.addValue("countries", forCountries);
+    params.addValue("countries", countries);
+    params.addValue("origins", countries);
 
     // Select keys since the given date. We need to make sure, only keys are returned
     // that are allowed to be published.
@@ -211,32 +227,20 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 
     String sql =
         "select keys.pk_exposed_id, keys.key, keys.rolling_start_number,"
-            + " keys.rolling_period, v.country from (select pk_exposed_id, key, rolling_start_number,"
+            + " keys.rolling_period, keys.origin, keys.days_since_onset_of_symptoms, keys.report_type, v.country"
+            + " from (select pk_exposed_id, key, rolling_start_number,"
             + " rolling_period, received_at,  "
             + getSQLExpressionForExpiry()
-            + " as expiry from t_gaen_exposed)"
+            + " as expiry, days_since_onset_of_symptoms, report_type, origin from t_gaen_exposed)"
             + " as keys inner join t_visited v on keys.pk_exposed_id = v.pfk_exposed_id"
-            + " where v.country in (:countries) and ((keys.received_at >= :since AND"
+            + " where (v.country in (:countries) OR keys.origin in (:origins)) and ((keys.received_at >= :since AND"
             + " keys.received_at < :maxBucket AND keys.expiry <= keys.received_at) OR (keys.expiry"
             + " >= :since AND keys.expiry < :maxBucket AND keys.expiry > keys.received_at))";
 
     sql += " order by keys.pk_exposed_id desc";
 
-    List<GaenKeyInterop> keys = jt.query(sql, params, new GaenKeyInteropRowMapper());
-    Map<String, List<GaenKeyInterop>> groupedKeys = keys.stream().collect(Collectors.groupingBy(GaenKeyInterop::getKeyData));
-    
-    final List<GaenKeyInterop> finalKeys = new ArrayList<>(); 
-    groupedKeys.keySet().forEach(k -> {
-    	finalKeys.add(groupedKeys.get(k).stream().reduce(null, (o, n) -> {
-    		if (null == o) {
-    			return n;
-    		} else {
-    			o.getVisitedCountries().addAll(n.getVisitedCountries());
-    			return o;
-    		}    		
-    	}));
-    });
-    return finalKeys;
+    List<GaenKeyInternal> keys = jt.query(sql, params, new GaenKeyInternalRowMapper());
+    return aggregateByCountry(keys);
     
   }
   
@@ -262,14 +266,14 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
   }
 
   private void internalUpsertKey(
-      GaenKey gaenKey, UTCInstant receivedAt, String origin, List<String> visitedCountries) {
+      GaenKeyInternal gaenKey, UTCInstant receivedAt) {
     String sqlKey = null;
     String sqlVisited = null;
     if (dbType.equals(PGSQL)) {
       sqlKey =
           "insert into t_gaen_exposed (key, rolling_start_number, rolling_period,"
-              + " received_at, origin) values (:key, :rolling_start_number,"
-              + " :rolling_period, :received_at, :origin) on conflict on"
+              + " received_at, origin, days_since_onset_of_symptoms, report_type) values (:key, :rolling_start_number,"
+              + " :rolling_period, :received_at, :origin, :days_since_onset_of_symptoms, :report_type) on conflict on"
               + " constraint gaen_exposed_key do nothing";
       sqlVisited =
           "insert into t_visited (pfk_exposed_id, country) values (:keyId, :country) on conflict on"
@@ -278,10 +282,13 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
       sqlKey =
           "merge into t_gaen_exposed using (values(cast(:key as varchar(24)),"
               + " :rolling_start_number, :rolling_period, :received_at, cast(:origin as"
-              + " varchar(10)))) as vals(key, rolling_start_number, rolling_period, received_at,"
-              + " origin) on t_gaen_exposed.key = vals.key when not matched then insert (key,"
-              + " rolling_start_number, rolling_period, received_at, origin) values (vals.key,"
-              + " vals.rolling_start_number, vals.rolling_period, vals.received_at, vals.origin)";
+              + " varchar(10)), :days_since_onset_of_symptoms, :report_type)) as "
+              + " vals(key, rolling_start_number, rolling_period, received_at,"
+              + " origin, days_since_onset_of_symptoms, report_type) on t_gaen_exposed.key = vals.key"
+              + " when not matched then insert (key, rolling_start_number, rolling_period, received_at, "
+              + " origin, days_since_onset_of_symptoms, report_type) values (vals.key,"
+              + " vals.rolling_start_number, vals.rolling_period, vals.received_at, vals.origin," 
+              + " vals.days_since_onset_of_symptoms, vals.report_type)";
       sqlVisited =
           "merge into t_visited using (values(:keyId, :country)) as vals(keyId, country) on"
               + " t_visited.pfk_exposed_id = vals.keyId and t_visited.country = vals.country when"
@@ -296,7 +303,9 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     params.addValue("rolling_start_number", gaenKey.getRollingStartNumber());
     params.addValue("rolling_period", gaenKey.getRollingPeriod());
     params.addValue("received_at", receivedAt.getDate());
-    params.addValue("origin", origin);
+    params.addValue("origin", gaenKey.getOrigin());
+    params.addValue("days_since_onset_of_symptoms", gaenKey.getDaysSinceOnsetOfSymptoms());
+    params.addValue("report_type", gaenKey.getReportType());
     KeyHolder keyHolder = new GeneratedKeyHolder();
     jt.update(sqlKey, params, keyHolder);
 
@@ -306,7 +315,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
       Object keyObject = keyHolder.getKeys().get("pk_exposed_id");
       if (keyObject != null) {
         int gaenKeyId = ((Integer) keyObject).intValue();
-        for (String country : visitedCountries) {
+        for (String country : gaenKey.getCountries()) {
           MapSqlParameterSource visitedParams = new MapSqlParameterSource();
           visitedParams.addValue("keyId", gaenKeyId);
           visitedParams.addValue("country", country);
@@ -320,13 +329,12 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     }
   }
 
-@Override
-public void upsertExposees(List<GaenKey> keys, UTCInstant now) {
-	this.upsertExposees(keys, now, null);	
-}
+  @Override
+  public List<GaenKeyInternal> getSortedExposedSince(UTCInstant keysSince, UTCInstant now, boolean international) {
+	List<String> forCountries = List.of(originCountry);
+	if (international)
+		forCountries.addAll(allOtherCountries);
+	return this.getSortedExposedSince(keysSince, now, forCountries);
+  }
 
-@Override
-public List<GaenKey> getSortedExposedSince(UTCInstant keysSince, UTCInstant now) {
-	return this.getSortedExposedSince(keysSince, now, null);
-}
 }

@@ -10,10 +10,13 @@ import java.time.Duration;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
+
 import javax.validation.Valid;
 import org.dpppt.backend.sdk.data.gaen.FakeKeyService;
 import org.dpppt.backend.sdk.data.gaen.GAENDataService;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.model.gaen.GaenV2UploadKeysRequest;
 import org.dpppt.backend.sdk.utils.DurationExpiredException;
 import org.dpppt.backend.sdk.utils.UTCInstant;
@@ -66,7 +69,8 @@ public class GaenV2Controller {
   private final Duration requestTime;
   private final Duration exposedListCacheControl;
   private final Duration retentionPeriod;
-
+  private final String originCountry;
+  
   private static final String HEADER_X_KEY_BUNDLE_TAG = "x-key-bundle-tag";
 
   public GaenV2Controller(
@@ -79,7 +83,8 @@ public class GaenV2Controller {
       Duration releaseBucketDuration,
       Duration requestTime,
       Duration exposedListCacheControl,
-      Duration retentionPeriod) {
+      Duration retentionPeriod,
+      String originCountry) {
     this.insertManager = insertManager;
     this.validateRequest = validateRequest;
     this.validationUtils = validationUtils;
@@ -90,6 +95,7 @@ public class GaenV2Controller {
     this.requestTime = requestTime;
     this.exposedListCacheControl = exposedListCacheControl;
     this.retentionPeriod = retentionPeriod;
+    this.originCountry = originCountry;
   }
 
   @GetMapping(value = "")
@@ -165,7 +171,7 @@ public class GaenV2Controller {
   public @ResponseBody ResponseEntity<byte[]> getExposedKeys(
 		  @Documentation(
 	              description =
-	                  "List of origin countries of requested keys. (iso-3166-1 alpha-2).",
+	                  "List of countries of interest of requested keys. (iso-3166-1 alpha-2).",
 	              example = "MT")
 	          @RequestParam(required = false)
 	          List<String> countries,
@@ -194,9 +200,12 @@ public class GaenV2Controller {
     }
     UTCInstant keyBundleTag = now.roundToBucketStart(releaseBucketDuration);
 
-    List<GaenKey> exposedKeys =
-        dataService.getSortedExposedSince(keysSince, now, countries);
+    // Make sure we're always interested in the origin country
+    List<GaenKeyInternal> exposedKeysInternal =
+        dataService.getSortedExposedSince(keysSince, now, enforceOriginCountry(countries));
 
+    var exposedKeys = exposedKeysInternal.stream().map(ek -> ek.asGaenKey()).collect(Collectors.toList());
+    
     if (exposedKeys.isEmpty()) {
       return ResponseEntity.noContent()
           .cacheControl(CacheControl.maxAge(exposedListCacheControl))
@@ -210,6 +219,17 @@ public class GaenV2Controller {
         .header(HEADER_X_KEY_BUNDLE_TAG, Long.toString(keyBundleTag.getTimestamp()))
         .body(payload.getZip());
   }
+
+  private List<String> enforceOriginCountry(List<String> countries) {
+	if (null == countries || countries.size() == 0) {
+    	countries = List.of(originCountry);
+    } else {
+    	if (!countries.contains(originCountry)) {
+    		countries.add(originCountry);
+    	}
+    }
+	return countries;
+}
 
   @ExceptionHandler({
     IllegalArgumentException.class,

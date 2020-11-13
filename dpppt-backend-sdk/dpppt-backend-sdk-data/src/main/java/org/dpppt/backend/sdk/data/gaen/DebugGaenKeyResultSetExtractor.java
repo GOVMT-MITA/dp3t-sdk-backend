@@ -7,25 +7,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ResultSetExtractor;
 
 public class DebugGaenKeyResultSetExtractor
-    implements ResultSetExtractor<Map<String, List<GaenKey>>> {
+    implements ResultSetExtractor<Map<String, List<GaenKeyInternal>>> {
 
   @Override
-  public Map<String, List<GaenKey>> extractData(ResultSet rs)
+  public Map<String, List<GaenKeyInternal>> extractData(ResultSet rs)
       throws SQLException, DataAccessException {
-    Map<String, List<GaenKey>> result = new HashMap<String, List<GaenKey>>();
-    GaenKeyRowMapper gaenKeyRowMapper = new GaenKeyRowMapper();
+    Map<String, List<GaenKeyInternal>> result = new HashMap<String, List<GaenKeyInternal>>();
+    GaenKeyInternalRowMapper gaenKeyRowMapper = new GaenKeyInternalRowMapper();
     while (rs.next()) {
       String deviceName = rs.getString("device_name");
-      List<GaenKey> keysForDevice = result.get(deviceName);
+      List<GaenKeyInternal> keysForDevice = result.get(deviceName);
       if (keysForDevice == null) {
         keysForDevice = new ArrayList<>();
         result.put(deviceName, keysForDevice);
       }
-      GaenKey gaenKey = gaenKeyRowMapper.mapRow(rs, rs.getRow());
+      GaenKeyInternal gaenKey = gaenKeyRowMapper.mapRow(rs, rs.getRow());
       keysForDevice.add(gaenKey);
     }
     return result;

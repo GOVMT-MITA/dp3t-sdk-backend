@@ -2,6 +2,7 @@ package org.dpppt.backend.sdk.ws.insertmanager.insertionfilters;
 
 import java.util.List;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.semver.Version;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.dpppt.backend.sdk.ws.insertmanager.InsertException;
@@ -25,9 +26,10 @@ public interface KeyInsertionFilter {
    * @return
    * @throws InsertException
    */
-  public List<GaenKey> filter(
+  public List<GaenKeyInternal> filter(
       UTCInstant now,
-      List<GaenKey> content,
+      List<GaenKeyInternal> content,
+      List<String> countries,
       OSType osType,
       Version osVersion,
       Version appVersion,

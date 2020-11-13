@@ -47,13 +47,14 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest(
     properties = {
       "ws.app.jwt.publickey=classpath://generated_pub.pem",
-      "logging.level.org.springframework.security=DEBUG",
+      "logging.level.org.springframework.security=INFO",
       "ws.exposedlist.releaseBucketDuration=7200000",
       "ws.gaen.randomkeysenabled=true",
       "ws.monitor.prometheus.user=prometheus",
       "ws.monitor.prometheus.password=prometheus",
       "management.endpoints.enabled-by-default=true",
-      "management.endpoints.web.exposure.include=*"
+      "management.endpoints.web.exposure.include=*",
+      "ws.origin.country=CH"
     })
 @Transactional
 public class GaenV2ControllerTest extends BaseControllerTest {

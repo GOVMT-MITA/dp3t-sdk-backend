@@ -294,7 +294,8 @@ public abstract class BaseControllerTest {
             now.atStartOfDay().minusDays(1),
             null,
             now.roundToNextBucket(releaseBucketDuration),
-            now);
+            now,
+            false);
     assertEquals(2, result.size());
     for (var key : result) {
       assertEquals(Integer.valueOf(144), key.getRollingPeriod());
@@ -305,7 +306,8 @@ public abstract class BaseControllerTest {
             now.atStartOfDay().minusDays(1),
             null,
             now.roundToBucketStart(releaseBucketDuration),
-            now);
+            now,
+            false);
     assertEquals(0, result.size());
 
     // third key should be released tomorrow (at four)
@@ -315,17 +317,18 @@ public abstract class BaseControllerTest {
             now.atStartOfDay(),
             null,
             tomorrow2AM.roundToNextBucket(releaseBucketDuration),
-            tomorrow2AM);
+            tomorrow2AM,
+            false);
     assertEquals(1, result.size());
 
     result =
         gaenDataService.getSortedExposedForKeyDate(
-            now.atStartOfDay(), null, now.roundToNextBucket(releaseBucketDuration), now);
+            now.atStartOfDay(), null, now.roundToNextBucket(releaseBucketDuration), now, false);
     assertEquals(0, result.size());
 
     result =
         gaenDataService.getSortedExposedForKeyDate(
-            now.atStartOfDay(), null, now.atStartOfDay().plusDays(1), now);
+            now.atStartOfDay(), null, now.atStartOfDay().plusDays(1), now, false);
     assertEquals(0, result.size());
   }
 

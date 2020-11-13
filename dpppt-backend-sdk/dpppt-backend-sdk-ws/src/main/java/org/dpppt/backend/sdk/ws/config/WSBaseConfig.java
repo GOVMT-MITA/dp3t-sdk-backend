@@ -44,6 +44,7 @@ import org.dpppt.backend.sdk.ws.insertmanager.insertionfilters.EnforceValidRolli
 import org.dpppt.backend.sdk.ws.insertmanager.insertionfilters.RemoveFakeKeys;
 import org.dpppt.backend.sdk.ws.insertmanager.insertionfilters.RemoveKeysFromFuture;
 import org.dpppt.backend.sdk.ws.insertmanager.insertionmodifier.IOSLegacyProblemRPLT144Modifier;
+import org.dpppt.backend.sdk.ws.insertmanager.insertionmodifier.InteropKeyModifier;
 import org.dpppt.backend.sdk.ws.insertmanager.insertionmodifier.OldAndroid0RPModifier;
 import org.dpppt.backend.sdk.ws.interceptor.HeaderInjector;
 import org.dpppt.backend.sdk.ws.security.KeyVault;
@@ -55,6 +56,7 @@ import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -150,7 +152,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
   @Value("${ws.origin.country}")
   String originCountry;
 
-  @Value("${ws.international.countries:}")
+  @Value("${ws.international.countries}")
   List<String> otherCountries;
   
   @Value("${ws.interop.enabled:false}")
@@ -209,7 +211,8 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
           Integer.valueOf(randomkeyamount),
           Integer.valueOf(gaenKeySizeBytes),
           Duration.ofDays(retentionDays),
-          randomkeysenabled);
+          randomkeysenabled,
+          originCountry);
     } catch (Exception ex) {
       throw new RuntimeException("FakeKeyService could not be instantiated", ex);
     }
@@ -232,7 +235,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
     }
   }
 
-  @Bean
+  @Bean("insertManagerExposed")
   public InsertManager insertManagerExposed() {
     var manager = new InsertManager(gaenDataService(), gaenValidationUtils());
     manager.addFilter(new AssertKeyFormat(gaenValidationUtils()));
@@ -241,10 +244,13 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
     manager.addFilter(new EnforceRetentionPeriod(gaenValidationUtils()));
     manager.addFilter(new RemoveFakeKeys());
     manager.addFilter(new EnforceValidRollingPeriod());
+    
+    manager.addModifier(new InteropKeyModifier(retentionDays, interopEnabled, otherCountries, originCountry));
+    
     return manager;
   }
 
-  @Bean
+  @Bean("insertManagerExposedNextDay")
   public InsertManager insertManagerExposedNextDay() {
     var manager = new InsertManager(gaenDataService(), gaenValidationUtils());
     manager.addFilter(new AssertKeyFormat(gaenValidationUtils()));
@@ -253,6 +259,9 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
     manager.addFilter(new EnforceRetentionPeriod(gaenValidationUtils()));
     manager.addFilter(new RemoveFakeKeys());
     manager.addFilter(new EnforceValidRollingPeriod());
+    
+    manager.addModifier(new InteropKeyModifier(retentionDays, interopEnabled, otherCountries, originCountry));
+
     return manager;
   }
 
@@ -294,14 +303,15 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
   }
 
   @Bean
-  public GaenController gaenController() {
+  public GaenController gaenController(@Qualifier("insertManagerExposed") InsertManager insertManagerExposed,
+		  @Qualifier("insertManagerExposedNextDay") InsertManager insertManagerExposedNextDay) {
     ValidateRequest theValidator = gaenRequestValidator;
     if (theValidator == null) {
       theValidator = backupValidator();
     }
     return new GaenController(
-        insertManagerExposed(),
-        insertManagerExposedNextDay(),
+        insertManagerExposed,
+        insertManagerExposedNextDay,
         gaenDataService(),
         fakeKeyService(),
         theValidator,
@@ -310,7 +320,10 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
         Duration.ofMillis(releaseBucketDuration),
         Duration.ofMillis(requestTime),
         Duration.ofMillis(exposedListCacheControl),
-        keyVault.get("nextDayJWT").getPrivate());
+        keyVault.get("nextDayJWT").getPrivate(),
+        interopEnabled,
+        otherCountries,
+        originCountry);
   }
 
   @Bean
@@ -329,7 +342,8 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
         Duration.ofMillis(releaseBucketDuration),
         Duration.ofMillis(requestTime),
         Duration.ofMillis(exposedListCacheControl),
-        Duration.ofDays(retentionDays));
+        Duration.ofDays(retentionDays),
+        originCountry);
   }
 
   @Bean

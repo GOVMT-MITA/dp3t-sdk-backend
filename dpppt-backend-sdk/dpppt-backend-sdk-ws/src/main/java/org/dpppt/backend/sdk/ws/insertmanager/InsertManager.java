@@ -2,9 +2,12 @@ package org.dpppt.backend.sdk.ws.insertmanager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+
 import org.dpppt.backend.sdk.data.gaen.DebugGAENDataService;
 import org.dpppt.backend.sdk.data.gaen.GAENDataService;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.semver.Version;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.dpppt.backend.sdk.ws.insertmanager.insertionfilters.KeyInsertionFilter;
@@ -76,21 +79,21 @@ public class InsertManager {
     if (keys == null || keys.isEmpty()) {
       return;
     }
-    var internalKeys = filterAndModify(keys, header, principal, now);
+    var internalKeys = filterAndModify(keys, countries, header, principal, now);
     // if no keys remain or this is a fake request, just return. Else, insert the
     // remaining keys.
     if (!internalKeys.isEmpty() && !validationUtils.jwtIsFake(principal)) {
-      dataService.upsertExposees(internalKeys, now, countries);      
+      dataService.upsertExposees(internalKeys, now);      
     }
   }
 
   public void insertIntoDatabaseDEBUG(
-      String deviceName, List<GaenKey> keys, String header, Object principal, UTCInstant now)
+      String deviceName, List<GaenKey> keys, String header, Object principal, UTCInstant now, List<String> countries)
       throws InsertException {
     if (keys == null || keys.isEmpty()) {
       return;
     }
-    var internalKeys = filterAndModify(keys, header, principal, now);
+    var internalKeys = filterAndModify(keys, countries, header, principal, now);
     // if no keys remain or this is a fake request, just return. Else, insert the
     // remaining keys.
     if (!internalKeys.isEmpty() && !validationUtils.jwtIsFake(principal)) {
@@ -98,12 +101,17 @@ public class InsertManager {
     }
   }
 
-  private List<GaenKey> filterAndModify(
-      List<GaenKey> keys, String header, Object principal, UTCInstant now) throws InsertException {
+  private List<GaenKeyInternal> filterAndModify(
+      List<GaenKey> keys, List<String> countries, String header, Object principal, UTCInstant now) throws InsertException {
     if (debugDataService != null) {
       logger.warn("DebugDataService is not null, don't use this in production!");
     }
-    var internalKeys = keys;
+    
+    // Convert keys to internal
+    List<GaenKeyInternal> internalKeys = keys.stream().map(ek -> {
+    	return new GaenKeyInternal(ek); 
+    }).collect(Collectors.toList());
+    
     var headerParts = header.split(";");
     if (headerParts.length < 5) {
       headerParts =
@@ -119,11 +127,11 @@ public class InsertManager {
     var appVersion = extractAppVersion(headerParts[1], headerParts[2]);
 
     for (KeyInsertionModifier modifier : modifierList) {
-      internalKeys = modifier.modify(now, internalKeys, osType, osVersion, appVersion, principal);
+      internalKeys = modifier.modify(now, internalKeys, countries, osType, osVersion, appVersion, principal);
     }
 
     for (KeyInsertionFilter filter : filterList) {
-      internalKeys = filter.filter(now, internalKeys, osType, osVersion, appVersion, principal);
+      internalKeys = filter.filter(now, internalKeys, countries, osType, osVersion, appVersion, principal);
     }
     return internalKeys;
   }

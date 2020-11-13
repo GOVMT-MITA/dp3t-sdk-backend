@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
+
 import javax.validation.Valid;
 import org.dpppt.backend.sdk.data.gaen.FakeKeyService;
 import org.dpppt.backend.sdk.data.gaen.GAENDataService;
@@ -92,6 +94,9 @@ public class GaenController {
   private final Duration exposedListCacheControl;
   private final PrivateKey secondDayKey;
   private final ProtoSignature gaenSigner;
+  private final boolean interopEnabled;
+  private final List<String> otherCountries;
+  private final String originCountry;
 
   public GaenController(
       InsertManager insertManagerExposed,
@@ -104,7 +109,11 @@ public class GaenController {
       Duration releaseBucketDuration,
       Duration requestTime,
       Duration exposedListCacheControl,
-      PrivateKey secondDayKey) {
+      PrivateKey secondDayKey,
+      boolean interopEnabled,
+      List<String> otherCountries,
+      String originCountry) {
+	  
     this.insertManagerExposed = insertManagerExposed;
     this.insertManagerExposedNextDay = insertManagerExposedNextDay;
     this.dataService = dataService;
@@ -116,6 +125,10 @@ public class GaenController {
     this.exposedListCacheControl = exposedListCacheControl;
     this.secondDayKey = secondDayKey;
     this.gaenSigner = gaenSigner;
+    this.interopEnabled = interopEnabled;
+    this.otherCountries = otherCountries;
+    this.originCountry = originCountry;
+    		
   }
 
   @GetMapping(value = "")
@@ -290,11 +303,14 @@ public class GaenController {
     // calculate exposed until bucket
     UTCInstant publishedUntil = now.roundToBucketStart(releaseBucketDuration);
 
-    var exposedKeys =
+    var exposedKeysInternal =
         dataService.getSortedExposedForKeyDate(
-            keyDateInstant, publishedAfterInstant, publishedUntil, now);
-    exposedKeys =
-        fakeKeyService.fillUpKeys(exposedKeys, publishedAfterInstant, keyDateInstant, now);
+            keyDateInstant, publishedAfterInstant, publishedUntil, now, interopEnabled);
+    exposedKeysInternal =
+        fakeKeyService.fillUpKeys(exposedKeysInternal, publishedAfterInstant, keyDateInstant, now);
+    
+    var exposedKeys = exposedKeysInternal.stream().map(ek -> ek.asGaenKey()).collect(Collectors.toList());
+    
     if (exposedKeys.isEmpty()) {
       return ResponseEntity.noContent()
           .cacheControl(CacheControl.maxAge(exposedListCacheControl))

@@ -88,7 +88,7 @@ public class GaenDataServiceConfig {
 
   @Bean
   public FakeKeyService fakeKeyService() throws NoSuchAlgorithmException {
-    return new FakeKeyService(fakeService(), 10, 16, Duration.ofDays(21), randomkeysenabled);
+    return new FakeKeyService(fakeService(), 10, 16, Duration.ofDays(21), randomkeysenabled, "CH");
   }
 
 }

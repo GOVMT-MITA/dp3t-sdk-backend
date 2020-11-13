@@ -1,6 +1,8 @@
 package org.dpppt.backend.sdk.ws.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.collect.Lists;
+
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -8,6 +10,8 @@ import java.security.SignatureException;
 import java.time.Duration;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
+
 import javax.validation.Valid;
 import org.dpppt.backend.sdk.data.gaen.DebugGAENDataService;
 import org.dpppt.backend.sdk.model.gaen.DayBuckets;
@@ -76,7 +80,7 @@ public class DebugController {
     // Filter out non valid keys and insert them into the database (c.f. InsertManager and
     // configured Filters in the WSBaseConfig)
     insertManager.insertIntoDatabaseDEBUG(
-        deviceName, gaenRequest.getGaenKeys(), userAgent, principal, now);
+        deviceName, gaenRequest.getGaenKeys(), userAgent, principal, now, null);
     var responseBuilder = ResponseEntity.ok();
 
     normalizeRequestTime(now.getTimestamp());
@@ -98,8 +102,8 @@ public class DebugController {
     var exposedKeys =
         dataService.getSortedExposedForBatchReleaseTime(
             UTCInstant.ofEpochMillis(batchReleaseTime), releaseBucketDuration);
-
-    byte[] payload = gaenSigner.getPayload(exposedKeys);
+    
+    byte[] payload = null; // gaenSigner.getPayload(exposedKeys);
 
     return ResponseEntity.ok()
         .header("X-BATCH-RELEASE-TIME", Long.toString(batchReleaseTimeDuration.toMillis()))

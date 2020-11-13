@@ -2,6 +2,7 @@ package org.dpppt.backend.sdk.ws.insertmanager.insertionmodifier;
 
 import java.util.List;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.semver.Version;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.dpppt.backend.sdk.ws.insertmanager.OSType;
@@ -21,14 +22,15 @@ public class OldAndroid0RPModifier implements KeyInsertionModifier {
   private static final Logger logger = LoggerFactory.getLogger(OldAndroid0RPModifier.class);
 
   @Override
-  public List<GaenKey> modify(
+  public List<GaenKeyInternal> modify(
       UTCInstant now,
-      List<GaenKey> content,
+      List<GaenKeyInternal> content,
+      List<String> countries,
       OSType osType,
       Version osVersion,
       Version appVersion,
       Object principal) {
-    for (GaenKey gaenKey : content) {
+    for (GaenKeyInternal gaenKey : content) {
       if (gaenKey.getRollingPeriod().equals(0)) {
         logger.error("We got a rollingPeriod of 0 ({},{},{})", osType, osVersion, appVersion);
         gaenKey.setRollingPeriod(144);

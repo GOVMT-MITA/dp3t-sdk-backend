@@ -16,7 +16,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
@@ -31,6 +33,7 @@ import org.dpppt.backend.sdk.data.config.FlyWayConfig;
 import org.dpppt.backend.sdk.data.config.GaenDataServiceConfig;
 import org.dpppt.backend.sdk.data.config.PostgresDataConfig;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.model.gaen.GaenUnit;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.junit.After;
@@ -80,7 +83,7 @@ public class PostgresGaenDataServiceTest {
       var noKeyAtThisDate = today.minusDays(22);
       var keysUntilToday = today.minusDays(21);
 
-      var keys = new ArrayList<GaenKey>();
+      var keys = new ArrayList<GaenKeyInternal>();
       var emptyList = fakeKeyService.fillUpKeys(keys, null, noKeyAtThisDate, now);
       assertEquals(0, emptyList.size());
       do {
@@ -153,29 +156,31 @@ public class PostgresGaenDataServiceTest {
     insertExposeeWithReceivedAtAndKeyDate(
         receivedAt.getInstant(), receivedAt.minusDays(1).getInstant(), key);
 
-    List<GaenKey> sortedExposedForDay =
-        gaenDataService.getSortedExposedForKeyDate(receivedAt.minusDays(1), null, now, now);
+    List<GaenKeyInternal> sortedExposedForDay =
+        gaenDataService.getSortedExposedForKeyDate(receivedAt.minusDays(1), null, now, now, false);
 
     assertFalse(sortedExposedForDay.isEmpty());
 
     gaenDataService.cleanDB(Duration.ofDays(21));
     sortedExposedForDay =
-        gaenDataService.getSortedExposedForKeyDate(receivedAt.minusDays(1), null, now, now);
+        gaenDataService.getSortedExposedForKeyDate(receivedAt.minusDays(1), null, now, now, false);
 
     assertTrue(sortedExposedForDay.isEmpty());
   }
 
   @Test
   public void upsert() throws Exception {
-    var tmpKey = new GaenKey();
+    var tmpKey = new GaenKeyInternal();
     tmpKey.setRollingStartNumber(
         (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
     tmpKey.setKeyData(Base64.getEncoder().encodeToString("testKey32Bytes--".getBytes("UTF-8")));
     tmpKey.setRollingPeriod(144);
     tmpKey.setFake(0);
-    List<GaenKey> keys = List.of(tmpKey);
+    tmpKey.setOrigin("CH");
+    tmpKey.setCountries(List.of("CH"));
+    List<GaenKeyInternal> keys = List.of(tmpKey);
 
-    gaenDataService.upsertExposees(keys, UTCInstant.now(), null);
+    gaenDataService.upsertExposees(keys, UTCInstant.now());
 
     var now = UTCInstant.now();
     // calculate exposed until bucket, but get bucket in the future, as keys have
@@ -184,7 +189,7 @@ public class PostgresGaenDataServiceTest {
 
     var returnedKeys =
         gaenDataService.getSortedExposedForKeyDate(
-            UTCInstant.today().minus(Duration.ofDays(1)), null, publishedUntil, now);
+            UTCInstant.today().minus(Duration.ofDays(1)), null, publishedUntil, now, false);
 
     assertEquals(keys.size(), returnedKeys.size());
     assertEquals(keys.get(0).getKeyData(), returnedKeys.get(0).getKeyData());
@@ -202,15 +207,15 @@ public class PostgresGaenDataServiceTest {
 
     var returnedKeys =
         gaenDataService.getSortedExposedForKeyDate(
-            receivedAt.minus(Duration.ofDays(2)), null, batchTime, now);
+            receivedAt.minus(Duration.ofDays(2)), null, batchTime, now, false);
 
     assertEquals(1, returnedKeys.size());
-    GaenKey actual = returnedKeys.get(0);
+    GaenKeyInternal actual = returnedKeys.get(0);
     assertEquals(actual.getKeyData(), key);
 
     returnedKeys =
         gaenDataService.getSortedExposedForKeyDate(
-            receivedAt.minus(Duration.ofDays(2)), batchTime, batchTime.plusHours(2), now);
+            receivedAt.minus(Duration.ofDays(2)), batchTime, batchTime.plusHours(2), now, false);
     assertEquals(0, returnedKeys.size());
   }
 
@@ -220,12 +225,22 @@ public class PostgresGaenDataServiceTest {
     String sql =
         "into t_gaen_exposed (pk_exposed_id, key, received_at, rolling_start_number,"
             + " rolling_period, origin) values (100, ?, ?, ?, 144, 'CH')";
-    PreparedStatement preparedStatement = connection.prepareStatement("insert " + sql);
+    PreparedStatement preparedStatement = connection.prepareStatement("insert " + sql, Statement.RETURN_GENERATED_KEYS);
     preparedStatement.setString(1, key);
     preparedStatement.setTimestamp(2, new Timestamp(receivedAt.toEpochMilli()));
     preparedStatement.setInt(
         3, (int) GaenUnit.TenMinutes.between(Instant.ofEpochMilli(0), keyDate));
-    preparedStatement.execute();
+    preparedStatement.executeUpdate();
+    
+    ResultSet rs = preparedStatement.getGeneratedKeys();
+
+    if (rs.next()) {
+        long pk = rs.getLong(1);
+        PreparedStatement stmtCountry = connection.prepareStatement("insert into t_visited (pfk_exposed_id, country) values (" + pk + ", 'CH')");
+        stmtCountry.executeUpdate();
+    }
+    
+    
   }
 
   protected void executeSQL(String sql) throws SQLException {

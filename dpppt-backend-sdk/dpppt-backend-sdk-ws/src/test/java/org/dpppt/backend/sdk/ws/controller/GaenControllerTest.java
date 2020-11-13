@@ -58,7 +58,8 @@ import org.springframework.transaction.annotation.Transactional;
       "ws.monitor.prometheus.user=prometheus",
       "ws.monitor.prometheus.password=prometheus",
       "management.endpoints.enabled-by-default=true",
-      "management.endpoints.web.exposure.include=*"
+      "management.endpoints.web.exposure.include=*",
+      "ws.origin.country=CH"
     })
 @Transactional
 public class GaenControllerTest extends BaseControllerTest {
@@ -178,7 +179,7 @@ public class GaenControllerTest extends BaseControllerTest {
 
     var result =
         gaenDataService.getSortedExposedForKeyDate(
-            midnight.minusDays(1), null, now.roundToNextBucket(releaseBucketDuration), now);
+            midnight.minusDays(1), null, now.roundToNextBucket(releaseBucketDuration), now, false);
     // all keys are invalid
     assertEquals(0, result.size());
   }
@@ -278,12 +279,12 @@ public class GaenControllerTest extends BaseControllerTest {
 
     var result =
         gaenDataService.getSortedExposedForKeyDate(
-            midnight.minusDays(1), null, now.roundToNextBucket(releaseBucketDuration), now);
+            midnight.minusDays(1), null, now.roundToNextBucket(releaseBucketDuration), now, false);
     // all keys are invalid
     assertEquals(0, result.size());
     result =
         gaenDataService.getSortedExposedForKeyDate(
-            midnight, null, now.roundToNextBucket(releaseBucketDuration), now);
+            midnight, null, now.roundToNextBucket(releaseBucketDuration), now, false);
     // all keys are invalid
     assertEquals(0, result.size());
   }
@@ -645,7 +646,7 @@ public class GaenControllerTest extends BaseControllerTest {
             .andReturn();
     var result =
         gaenDataService.getSortedExposedForKeyDate(
-            midnight.minusDays(2), null, now.roundToNextBucket(releaseBucketDuration), now);
+            midnight.minusDays(2), null, now.roundToNextBucket(releaseBucketDuration), now, false);
 
     assertEquals(0, result.size());
   }
@@ -736,7 +737,7 @@ public class GaenControllerTest extends BaseControllerTest {
             .andReturn();
     var result =
         gaenDataService.getSortedExposedForKeyDate(
-            midnight.plusDays(2), null, now.roundToNextBucket(releaseBucketDuration), now);
+            midnight.plusDays(2), null, now.roundToNextBucket(releaseBucketDuration), now, false);
 
     assertEquals(0, result.size());
   }
@@ -784,7 +785,7 @@ public class GaenControllerTest extends BaseControllerTest {
             .andReturn();
     var result =
         gaenDataService.getSortedExposedForKeyDate(
-            midnight.minusDays(22), null, now.roundToNextBucket(releaseBucketDuration), now);
+            midnight.minusDays(22), null, now.roundToNextBucket(releaseBucketDuration), now, false);
     assertEquals(0, result.size());
   }
 

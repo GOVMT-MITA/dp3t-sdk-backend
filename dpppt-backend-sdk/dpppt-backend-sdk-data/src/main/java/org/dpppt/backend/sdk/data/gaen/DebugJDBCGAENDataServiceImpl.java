@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import javax.sql.DataSource;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +39,7 @@ public class DebugJDBCGAENDataServiceImpl implements DebugGAENDataService {
 
   @Override
   @Transactional(readOnly = false)
-  public void upsertExposees(String deviceName, List<GaenKey> gaenKeys) {
+  public void upsertExposees(String deviceName, List<GaenKeyInternal> gaenKeys) {
     String sql = null;
     if (dbType.equals(PGSQL)) {
       sql =
@@ -71,7 +72,7 @@ public class DebugJDBCGAENDataServiceImpl implements DebugGAENDataService {
 
   @Override
   @Transactional(readOnly = true)
-  public Map<String, List<GaenKey>> getSortedExposedForBatchReleaseTime(
+  public Map<String, List<GaenKeyInternal>> getSortedExposedForBatchReleaseTime(
       UTCInstant batchReleaseTime, Duration releaseBucketDuration) {
     String sql =
         "select pk_exposed_id, device_name, key, rolling_start_number, rolling_period,"
@@ -82,4 +83,5 @@ public class DebugJDBCGAENDataServiceImpl implements DebugGAENDataService {
     params.addValue("startBatch", batchReleaseTime.minus(releaseBucketDuration).getDate());
     return jt.query(sql, params, new DebugGaenKeyResultSetExtractor());
   }
+
 }

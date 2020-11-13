@@ -15,7 +15,7 @@ import org.dpppt.backend.sdk.interops.batchsigning.SignatureGenerator;
 import org.dpppt.backend.sdk.interops.model.EfgsProto;
 import org.dpppt.backend.sdk.interops.model.EfgsProto.ReportType;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
-import org.dpppt.backend.sdk.model.gaen.GaenKeyInterop;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,11 +114,11 @@ public class EfgsSyncer {
 	  }
 	  var keysSince = UTCInstant.ofEpochMillis(syncStateService.getLastUploadKeyBundleTag());
 	
-	  List<GaenKeyInterop> exposedKeys = Lists.newArrayList();
+	  List<GaenKeyInternal> exposedKeys = Lists.newArrayList();
 	  int multiplier = 2;
 	  UTCInstant till = now;
 	  do {		  
-		  exposedKeys = gaenDataService.getSortedExposedSinceForInterop(keysSince, till);	
+		  exposedKeys = gaenDataService.getSortedExposedSince(keysSince, till, originCountry);	
 		  till = now.minus(releaseBucketDuration.multipliedBy(multiplier++));		  
 	  } while (exposedKeys.size() > this.efgsMaxUploadKeys);
 	  UTCInstant keyBundleTag = till.roundToBucketStart(releaseBucketDuration);
@@ -135,7 +135,7 @@ public class EfgsSyncer {
 		  	.setRollingStartIntervalNumber(ek.getRollingStartNumber())
 		  	.setRollingPeriod(ek.getRollingPeriod())
 		  	.setTransmissionRiskLevel(ek.getTransmissionRiskLevel())
-		  	.addAllVisitedCountries(ek.getVisitedCountries())
+		  	.addAllVisitedCountries(ek.getCountries())
 		  	.setOrigin(this.originCountry)
 		  	.setReportType(ReportType.CONFIRMED_TEST)
 		  	.setDaysSinceOnsetOfSymptoms(ek.getDaysSinceOnsetOfSymptoms())
@@ -249,21 +249,25 @@ public class EfgsSyncer {
     UTCInstant now = UTCInstant.now();
     logger.info("Received " + receivedKeys.size() + " keys. Store ...");
     for (EfgsProto.DiagnosisKey diagKey : receivedKeys) {
-      GaenKey gaenKey = mapToGaenKey(diagKey);
+      GaenKeyInternal gaenKey = mapToGaenKey(diagKey);
       if (diagKey.getOrigin() != null
           && !diagKey.getOrigin().isBlank()
           && !diagKey.getVisitedCountriesList().isEmpty()) {
-        gaenDataService.upsertExposeeFromInterops(
-            gaenKey, now, diagKey.getOrigin(), diagKey.getVisitedCountriesList());
+        gaenDataService.upsertExposee(gaenKey, now);
       }
     }
   }
 
-  private GaenKey mapToGaenKey(EfgsProto.DiagnosisKey diagKey) {
-    GaenKey gaenKey = new GaenKey();
+  private GaenKeyInternal mapToGaenKey(EfgsProto.DiagnosisKey diagKey) {
+    GaenKeyInternal gaenKey = new GaenKeyInternal();
     gaenKey.setKeyData(diagKey.getKeyData().toStringUtf8());
     gaenKey.setRollingPeriod(diagKey.getRollingPeriod());
     gaenKey.setRollingStartNumber(diagKey.getRollingStartIntervalNumber());
+    gaenKey.setFake(0);
+    gaenKey.setTransmissionRiskLevel(diagKey.getTransmissionRiskLevel());
+    gaenKey.setDaysSinceOnsetOfSymptoms(diagKey.getDaysSinceOnsetOfSymptoms());
+    gaenKey.setCountries(diagKey.getVisitedCountriesList());
+    gaenKey.setOrigin(diagKey.getOrigin());
     return gaenKey;
   }
 
