@@ -120,7 +120,7 @@ public class GaenDataServiceTest {
       tmpKey.setFake(0);
       tmpKey.setTransmissionRiskLevel(0);
 
-      gaenDataService.upsertExposees(List.of(tmpKey), now);
+      gaenDataService.upsertExposees(List.of(tmpKey), now, false);
     }
     // key was inserted with a rolling period of 10 hours, which means the key is not allowed to be
     // released before 12, but since 12 already is in the 14 O'Clock bucket, it is not released
@@ -128,13 +128,13 @@ public class GaenDataServiceTest {
 
     // eleven O'clock no key
     try (var now = UTCInstant.setClock(elevenOClock)) {
-      var returnedKeys = gaenDataService.getSortedExposedSince(now.minusDays(10), now);
+      var returnedKeys = gaenDataService.getSortedExposedSince(now.minusDays(10), now, false);
       assertEquals(0, returnedKeys.size());
     }
 
     // twelve O'clock release the key
     try (var now = UTCInstant.setClock(fourteenOClock)) {
-      var returnedKeys = gaenDataService.getSortedExposedSince(now.minusDays(10), now);
+      var returnedKeys = gaenDataService.getSortedExposedSince(now.minusDays(10), now, false);
       assertEquals(1, returnedKeys.size());
     }
   }
