@@ -79,6 +79,38 @@ public class GaenDataServiceTest {
 
   @Test
   @Transactional
+  public void upsertAndGetSince() throws Exception {
+    var tmpKey = new GaenKeyInternal();
+    tmpKey.setRollingStartNumber(
+        (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
+    tmpKey.setKeyData(Base64.getEncoder().encodeToString("testKey32Bytes01".getBytes("UTF-8")));
+    tmpKey.setRollingPeriod(144);
+    tmpKey.setFake(0);
+    tmpKey.setTransmissionRiskLevel(0);
+    tmpKey.setOrigin("CH");
+    tmpKey.setCountries(List.of("CH"));
+    var tmpKey2 = new GaenKeyInternal();
+    tmpKey2.setRollingStartNumber(
+        (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
+    tmpKey2.setKeyData(Base64.getEncoder().encodeToString("testKey32Bytes02".getBytes("UTF-8")));
+    tmpKey2.setRollingPeriod(144);
+    tmpKey2.setFake(0);
+    tmpKey2.setTransmissionRiskLevel(0);
+    tmpKey2.setOrigin("CH");
+    tmpKey2.setCountries(List.of("CH"));
+    List<GaenKeyInternal> keys = List.of(tmpKey, tmpKey2);
+    var now = UTCInstant.now();
+    gaenDataService.upsertExposees(keys, now);
+
+    var returnedKeys =
+        gaenDataService.getSortedExposedSince(now.minusDays(10), now.plusDays(1), true);
+
+    assertEquals(keys.size(), returnedKeys.size());
+    assertEquals(keys.get(1).getKeyData(), returnedKeys.get(0).getKeyData());
+  }
+
+  @Test
+  @Transactional
   public void testNoEarlyReleaseSince() throws Exception {
     var outerNow = UTCInstant.now();
     Clock twoOClock =
