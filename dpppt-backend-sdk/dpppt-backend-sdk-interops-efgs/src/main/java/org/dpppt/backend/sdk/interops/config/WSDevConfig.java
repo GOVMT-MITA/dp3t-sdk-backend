@@ -72,7 +72,8 @@ public class WSDevConfig extends WSBaseConfig {
           Integer.valueOf(randomkeyamount),
           Integer.valueOf(gaenKeySizeBytes),
           Duration.ofDays(retentionDays),
-          randomkeysenabled);
+          randomkeysenabled,
+          originCountry);
     } catch (Exception ex) {
       throw new RuntimeException("FakeKeyService could not be instantiated", ex);
     }

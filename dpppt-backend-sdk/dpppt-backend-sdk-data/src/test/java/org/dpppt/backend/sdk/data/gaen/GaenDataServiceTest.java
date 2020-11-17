@@ -231,4 +231,98 @@ public class GaenDataServiceTest {
     assertEquals(1, returnedKeys.size());
     assertEquals(keys.get(1).getKeyData(), returnedKeys.get(0).getKeyData());
   }
+  
+
+  @Test
+  @Transactional
+  public void upsertMultipleCountry() throws Exception {
+    var tmpKey = new GaenKeyInternal();
+    tmpKey.setRollingStartNumber(
+        (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
+    tmpKey.setKeyData(Base64.getEncoder().encodeToString("testKey32Bytes01".getBytes("UTF-8")));
+    tmpKey.setRollingPeriod(144);
+    tmpKey.setFake(0);
+    tmpKey.setTransmissionRiskLevel(0);
+    tmpKey.setOrigin("CH");
+    tmpKey.setCountries(List.of("CH"));
+    var tmpKey2 = new GaenKeyInternal();
+    tmpKey2.setRollingStartNumber(
+        (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
+    tmpKey2.setKeyData(Base64.getEncoder().encodeToString("testKey32Bytes02".getBytes("UTF-8")));
+    tmpKey2.setRollingPeriod(144);
+    tmpKey2.setFake(0);
+    tmpKey2.setTransmissionRiskLevel(0);
+    tmpKey2.setOrigin("CH");
+    tmpKey2.setCountries(List.of("CH","DE"));
+    var tmpKey3 = new GaenKeyInternal();
+    tmpKey3.setRollingStartNumber(
+        (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
+    tmpKey3.setKeyData(Base64.getEncoder().encodeToString("testKey32Bytes03".getBytes("UTF-8")));
+    tmpKey3.setRollingPeriod(144);
+    tmpKey3.setFake(0);
+    tmpKey3.setTransmissionRiskLevel(0);
+    tmpKey3.setOrigin("IT");
+    tmpKey3.setCountries(List.of("IT","DE","CH"));
+    var tmpKey4 = new GaenKeyInternal();
+    tmpKey4.setRollingStartNumber(
+            (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
+    tmpKey4.setKeyData(Base64.getEncoder().encodeToString("testKey32Bytes04".getBytes("UTF-8")));
+    tmpKey4.setRollingPeriod(144);
+    tmpKey4.setFake(0);
+    tmpKey4.setTransmissionRiskLevel(0);
+    tmpKey4.setOrigin("DE");
+    tmpKey4.setCountries(List.of("DE"));
+    var tmpKey5 = new GaenKeyInternal();
+    tmpKey5.setRollingStartNumber(
+            (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
+    tmpKey5.setKeyData(Base64.getEncoder().encodeToString("testKey32Bytes04".getBytes("UTF-8")));
+    tmpKey5.setRollingPeriod(144);
+    tmpKey5.setFake(0);
+    tmpKey5.setTransmissionRiskLevel(0);
+    tmpKey5.setOrigin("IE");
+    tmpKey5.setCountries(List.of("IE"));
+    
+    
+    List<GaenKeyInternal> keys = List.of(tmpKey, tmpKey2, tmpKey3, tmpKey4, tmpKey5);
+    var now = UTCInstant.now();
+    gaenDataService.upsertExposees(keys, now);
+
+    // calculate exposed until bucket, but get bucket in the future, as keys have
+    // been inserted with timestamp now.
+    UTCInstant publishedUntil = now.roundToNextBucket(BUCKET_LENGTH);
+
+    var returnedKeys =
+    		gaenDataService.getSortedExposedSince(UTCInstant.today().minusDays(1), publishedUntil, false);
+
+    assertEquals(3, returnedKeys.size());
+    
+    returnedKeys =
+    		gaenDataService.getSortedExposedSince(UTCInstant.today().minusDays(1), publishedUntil, true);
+
+    assertEquals(4, returnedKeys.size());
+
+    returnedKeys =
+    		gaenDataService.getSortedExposedSince(UTCInstant.today().minusDays(1), publishedUntil, List.of("IT"));
+
+    assertEquals(1, returnedKeys.size());
+
+    returnedKeys =
+    		gaenDataService.getSortedExposedSince(UTCInstant.today().minusDays(1), publishedUntil, List.of("DE"));
+
+    assertEquals(3, returnedKeys.size());
+
+    returnedKeys =
+            gaenDataService.getSortedExposedForKeyDate(
+                UTCInstant.today().minusDays(1), null, publishedUntil, now, false);
+    
+    assertEquals(3, returnedKeys.size());
+
+    returnedKeys =
+            gaenDataService.getSortedExposedForKeyDate(
+                UTCInstant.today().minusDays(1), null, publishedUntil, now, true);
+    
+    assertEquals(4, returnedKeys.size());
+
+  }
+  
 }

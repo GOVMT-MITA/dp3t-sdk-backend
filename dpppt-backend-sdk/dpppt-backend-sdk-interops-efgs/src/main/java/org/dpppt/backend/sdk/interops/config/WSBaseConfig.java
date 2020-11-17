@@ -108,11 +108,17 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	@Value("${ws.interops.efgs.maxage: 2}")
 	int efgsMaxAgeDays;
 	
-	@Value("${ws.interops.efgs.download.maxkeys: 8000}")
+	@Value("${ws.interops.efgs.download.maxkeys: 100000}")
 	long efgsMaxDownloadKeys;
 
 	@Value("${ws.interops.efgs.upload.maxkeys: 2}")
 	long efgsMaxUploadKeys;
+
+	@Value("${ws.interops.efgs.callback.id}")
+	String efgsCallbackId;
+
+	@Value("${ws.interops.efgs.callback.url}")
+	String efgsCallbackUrl;
 
 	protected final Logger logger = LoggerFactory.getLogger(getClass());
 

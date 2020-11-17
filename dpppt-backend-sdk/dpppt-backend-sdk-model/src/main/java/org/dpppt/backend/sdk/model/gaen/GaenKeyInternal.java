@@ -10,7 +10,7 @@ public class GaenKeyInternal {
 	private Integer rollingPeriod;
 	private Integer transmissionRiskLevel = 0;
 	private List<String> countries;
-	private long daysSinceOnsetOfSymptoms;
+	private int daysSinceOnsetOfSymptoms;
 	private String origin;
 	private String reportType;
 	private Integer fake = 0;
@@ -63,11 +63,11 @@ public class GaenKeyInternal {
 		this.reportType = reportType;
 	}
 
-	public long getDaysSinceOnsetOfSymptoms() {
+	public int getDaysSinceOnsetOfSymptoms() {
 		return daysSinceOnsetOfSymptoms;
 	}
 
-	public void setDaysSinceOnsetOfSymptoms(long daysSinceOnsetOfSymptoms) {
+	public void setDaysSinceOnsetOfSymptoms(int daysSinceOnsetOfSymptoms) {
 		this.daysSinceOnsetOfSymptoms = daysSinceOnsetOfSymptoms;
 	}
 

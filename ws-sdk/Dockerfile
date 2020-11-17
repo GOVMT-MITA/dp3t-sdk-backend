@@ -40,4 +40,4 @@ USER ws
 # Access to webinterface
 EXPOSE 8080
 
-CMD java -jar $JAVA_OPTS -Dlogging.config=/home/ws/conf/dpppt-backend-sdk-ws-logback.xml -Dspring.config.location=/home/ws/conf/dpppt-backend-sdk-ws.properties /home/ws/bin/dpppt-backend-sdk-ws.jar
+CMD java -jar $JAVA_OPTS -Dws.origin.country=MT -Dlogging.config=/home/ws/conf/dpppt-backend-sdk-ws-logback.xml -Dspring.config.location=/home/ws/conf/dpppt-backend-sdk-ws.properties /home/ws/bin/dpppt-backend-sdk-ws.jar

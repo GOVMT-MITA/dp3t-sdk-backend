@@ -8,6 +8,7 @@ public class InMemorySyncStateService implements SyncStateService {
 
 	private Map<LocalDate, String> lastDownloadedBatchTagMap;
 	private Long lastUploadKeyBundleTag = null;
+	private CallbackSub callbackSub = null;
 
 	public InMemorySyncStateService() {
 		super();
@@ -28,6 +29,16 @@ public class InMemorySyncStateService implements SyncStateService {
 
 	public void setLastUploadKeyBundleTag(Long lastUploadKeyBundleTag) {
 		this.lastUploadKeyBundleTag = lastUploadKeyBundleTag;
+	}
+
+	@Override
+	public void saveCallback(String id, String url) {
+		callbackSub = new CallbackSub(id, url);
+	}
+
+	@Override
+	public CallbackSub getCallbackSub(String id) {
+		return callbackSub;
 	}
 
 }

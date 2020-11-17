@@ -16,11 +16,19 @@ import org.flywaydb.core.api.migration.Context;
 
 public class V2_0_3__SetOriginForExistingKeys extends BaseJavaMigration {
 
+  private static final String ORIGIN_COUNTRY_SYS_VAR = "ws.origin.country";
+	
   @Override
   public void migrate(Context context) throws Exception {
 
-    // HSQLDB: For Testing purposes only, set origin to CH
-    String originCountry = "CH";
+    String originCountry = System.getProperty(ORIGIN_COUNTRY_SYS_VAR);
+    if (originCountry == null || originCountry.isBlank()) {
+      throw new IllegalArgumentException(
+          "For successfull migration to the DP3T V2 database schema the country of origin must be"
+              + " specified as system variable: "
+              + ORIGIN_COUNTRY_SYS_VAR
+              + " (for example: java -jar dp3t-sdk.jar -Dws.origin.country=CH ... )");
+    }
 
     // Update all existing keys with no origin to the given origin country
     try (PreparedStatement update =

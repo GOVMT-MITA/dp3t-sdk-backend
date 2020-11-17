@@ -50,7 +50,7 @@ show:
 	cd documentation; open $(FILE_NAME).pdf &
 
 docker:
-	cp $(DP3T_SDK_WS)/target/dpppt-backend-sdk-ws.jar ws-sdk/ws/bin/dpppt-backend-sdk-ws-1.0.0.jar
+	cp $(DP3T_SDK_WS)/target/dpppt-backend-sdk-ws.jar ws-sdk/ws/bin/dpppt-backend-sdk-ws.jar
 	docker build --build-arg targetenv=${TARGET_ENV} -t ${DOCKER_REPO}/dpppt-mt-ws:${IMAGE_TAG} ws-sdk/
 	@printf '\033[33m DO NOT USE THIS IN PRODUCTION \033[0m \n'
 	@printf "\033[32m docker run -p 8080:8080 -v $(PWD)/$(DP3T_SDK_WS)/src/main/resources/logback.xml:/home/ws/conf/dpppt-backend-sdk-ws-logback.xml -v $(PWD)/dpppt-backend-sdk/dpppt-backend-sdk-ws/src/main/resources/application.properties:/home/ws/conf/dpppt-backend-sdk-ws.properties dp3t-docker \033[0m\n"

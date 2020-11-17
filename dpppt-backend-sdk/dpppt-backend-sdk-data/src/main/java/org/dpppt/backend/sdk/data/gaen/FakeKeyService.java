@@ -59,7 +59,7 @@ public class FakeKeyService {
         key.setRollingPeriod(144);
         key.setOrigin(originCountry);
         key.setReportType("CONFIRMED_TEST");
-        key.setDaysSinceOnsetOfSymptoms(retentionPeriod.toDays());
+        key.setDaysSinceOnsetOfSymptoms(14);
         key.setCountries(List.of(originCountry));
         keys.add(key);
       }
