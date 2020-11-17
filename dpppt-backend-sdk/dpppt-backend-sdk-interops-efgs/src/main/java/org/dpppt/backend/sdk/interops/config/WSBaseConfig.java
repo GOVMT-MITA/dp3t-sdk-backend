@@ -60,6 +60,7 @@ import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.converter.protobuf.ProtobufHttpMessageConverter;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
@@ -108,11 +109,17 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	@Value("${ws.interops.efgs.maxage: 2}")
 	int efgsMaxAgeDays;
 	
-	@Value("${ws.interops.efgs.download.maxkeys: 8000}")
+	@Value("${ws.interops.efgs.download.maxkeys: 100000}")
 	long efgsMaxDownloadKeys;
 
 	@Value("${ws.interops.efgs.upload.maxkeys: 2}")
 	long efgsMaxUploadKeys;
+
+	@Value("${ws.interops.efgs.callback.id}")
+	String efgsCallbackId;
+
+	@Value("${ws.interops.efgs.callback.url}")
+	String efgsCallbackUrl;
 
 	protected final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -135,7 +142,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	
 	@Bean
 	public EfgsSyncer efgsSyncer(GAENDataService gaenDataService, RestTemplate restTemplate, SignatureGenerator signatureGenerator, SyncStateService syncStateService) throws Exception {
-		return new EfgsSyncer(efgsBaseUrl, 
+		EfgsSyncer syncer = new EfgsSyncer(efgsBaseUrl, 
 				retentionDays, 
 				efgsMaxAgeDays, 
 				efgsMaxDownloadKeys, 
@@ -145,7 +152,11 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 				gaenDataService, 
 				restTemplate, 
 				signatureGenerator,
-				syncStateService);
+				syncStateService,
+				efgsCallbackId,
+				efgsCallbackUrl);
+		syncer.init();
+		return syncer;
 	}
 
 	@Autowired
@@ -182,7 +193,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 		
 		RestTemplate rt = builder
 				.requestFactory(s1)
-				.messageConverters(hmc, new ByteArrayHttpMessageConverter())
+				.messageConverters(hmc, new ByteArrayHttpMessageConverter(), new MappingJackson2HttpMessageConverter())
 				.build();
 		
 		List<ClientHttpRequestInterceptor> interceptors = rt.getInterceptors();
@@ -191,8 +202,13 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 			@Override
 			public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
 					throws IOException {
-				ClientHttpResponse response = execution.execute(request, body);				
-		        response.getHeaders().set("Content-Type", "application/x-protobuf");
+				ClientHttpResponse response = execution.execute(request, body);
+				if (response.getHeaders().containsKey("Content-Type")) {
+					String contentType = response.getHeaders().getContentType().toString();
+					if (contentType.equals("application/protobuf; version=1.0")) {
+				        response.getHeaders().set("Content-Type", "application/x-protobuf");					
+					}					
+				}
 		        return response;			
 		    }
 			

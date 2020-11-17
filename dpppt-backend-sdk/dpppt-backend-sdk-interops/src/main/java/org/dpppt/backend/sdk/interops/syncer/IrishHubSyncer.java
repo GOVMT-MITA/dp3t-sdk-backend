@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.dpppt.backend.sdk.data.gaen.GAENDataService;
 import org.dpppt.backend.sdk.interops.model.IrishHubDownloadResponse;
@@ -26,6 +28,7 @@ import org.dpppt.backend.sdk.interops.model.IrishHubKey;
 import org.dpppt.backend.sdk.interops.model.IrishHubUploadResponse;
 import org.dpppt.backend.sdk.interops.utils.RestTemplateHelper;
 import org.dpppt.backend.sdk.model.gaen.GaenKey;
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,7 +117,10 @@ public class IrishHubSyncer {
     logger.info("Start upload keys since: " + lastUploadTill);
     UTCInstant uploadTill = now.roundToBucketStart(releaseBucketDuration);
     // TODO: load key with visited countries. (new model, new retrieval method)
-    List<GaenKey> keysToUpload = gaenDataService.getSortedExposedSince(lastUploadTill, now, false);
+    List<GaenKey> keysToUpload = gaenDataService.getSortedExposedSince(lastUploadTill, now, this.origin)
+    		.stream()
+    		.map(k -> k.asGaenKey())
+    		.collect(Collectors.toList());
     logger.info("Found " + keysToUpload.size() + " keys to upload");
 
     List<IrishHubKey> irishKeysToUpload = new ArrayList<>();
@@ -215,21 +221,22 @@ public class IrishHubSyncer {
     UTCInstant now = UTCInstant.now();
     logger.info("Received " + receivedKeys.size() + " keys. Store ...");
     for (IrishHubKey irishKey : receivedKeys) {
-      GaenKey gaenKey = mapToGaenKey(irishKey);
+      GaenKeyInternal gaenKey = mapToGaenKey(irishKey);
       if (irishKey.getOrigin() != null
           && !irishKey.getOrigin().isBlank()
-          && !irishKey.getRegions().isEmpty()) {
-        gaenDataService.upsertExposeeFromInterops(
-            gaenKey, now, irishKey.getOrigin(), irishKey.getRegions());
+          && !irishKey.getRegions().isEmpty()) {    	  
+        gaenDataService.upsertExposee(gaenKey, now);
       }
     }
   }
 
-  private GaenKey mapToGaenKey(IrishHubKey irishKey) {
-    GaenKey gaenKey = new GaenKey();
+  private GaenKeyInternal mapToGaenKey(IrishHubKey irishKey) {
+	GaenKeyInternal gaenKey = new GaenKeyInternal();
     gaenKey.setKeyData(irishKey.getKeyData());
     gaenKey.setRollingPeriod(irishKey.getRollingPeriod());
     gaenKey.setRollingStartNumber(irishKey.getRollingStartNumber());
+    gaenKey.setOrigin(irishKey.getOrigin());
+    gaenKey.setCountries(irishKey.getRegions());
     return gaenKey;
   }
 

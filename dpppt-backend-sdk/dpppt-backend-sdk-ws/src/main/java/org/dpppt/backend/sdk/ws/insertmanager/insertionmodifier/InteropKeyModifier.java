@@ -60,7 +60,7 @@ public InteropKeyModifier(int retentionDays, boolean interopEnabled, List<String
 	for (GaenKeyInternal gaenKey : content) {		
 		var keyDate = UTCInstant.of(gaenKey.getRollingStartNumber() * 10, ChronoUnit.MINUTES);
 		long daysSinceOnsetOfSymptoms = ChronoUnit.DAYS.between(keyDate.getInstant(), onsetDate.getInstant());
-		gaenKey.setDaysSinceOnsetOfSymptoms(daysSinceOnsetOfSymptoms);
+		gaenKey.setDaysSinceOnsetOfSymptoms((int) daysSinceOnsetOfSymptoms);		
 		if (null == countries) {
 		    countries = List.of(originCountry);
 		    if (interopEnabled) {

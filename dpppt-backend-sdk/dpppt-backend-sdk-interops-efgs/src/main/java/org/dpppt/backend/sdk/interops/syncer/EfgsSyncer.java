@@ -1,7 +1,10 @@
 package org.dpppt.backend.sdk.interops.syncer;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -9,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import org.dpppt.backend.sdk.data.gaen.GAENDataService;
 import org.dpppt.backend.sdk.interops.batchsigning.SignatureGenerator;
@@ -19,16 +23,20 @@ import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
 import org.dpppt.backend.sdk.utils.UTCInstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
+
+import lombok.AllArgsConstructor;
 
 /**
  * Interops syncer for the irish hub:
@@ -38,6 +46,8 @@ import com.google.protobuf.ByteString;
  */
 public class EfgsSyncer {
 
+  private static final Object MUTEX = new Object();
+  
   private final String baseUrl;
   private final int retentionDays;
   private final int efgsMaxAgeDays;
@@ -49,12 +59,20 @@ public class EfgsSyncer {
   private final Duration releaseBucketDuration;
 
   private final SyncStateService syncStateService;
+
+  private final String efgsCallbackId;
+  private final String efgsCallbackUrl;
+
   
   // path for downloading keys. the %s must be replaced by day dates to retreive the keys for one
   // day, for example: 2020-09-15
   private static final String DOWNLOAD_PATH = "/diagnosiskeys/download/%s";
 
   private static final String UPLOAD_PATH = "/diagnosiskeys/upload";
+  
+  private static final String CALLBACK_PATH = "/diagnosiskeys/callback";
+  
+  private static final String CALLBACK_PATH_WITH_ID = "/diagnosiskeys/callback/%s";
 
   private final RestTemplate restTemplate;
   
@@ -73,7 +91,9 @@ public class EfgsSyncer {
       GAENDataService gaenDataService,
       RestTemplate restTemplate,
       SignatureGenerator signatureGenerator,
-      SyncStateService syncStateService) {
+      SyncStateService syncStateService,
+      String efgsCallbackId,
+      String efgsCallbackUrl) {
     this.baseUrl = baseUrl;
     this.retentionDays = retentionDays;
     this.efgsMaxAgeDays = efgsMaxAgeDays;
@@ -85,6 +105,17 @@ public class EfgsSyncer {
     this.releaseBucketDuration = releaseBucketDuration;
     this.signatureGenerator = signatureGenerator;
     this.syncStateService = syncStateService;
+    this.efgsCallbackId = efgsCallbackId;
+    this.efgsCallbackUrl = efgsCallbackUrl;
+  }
+  
+  public void init() {
+    try {
+        setupCallback();
+      } catch (Exception e) {
+        logger.error("Exception while setting up callback subscription:", e);
+      }
+	  
   }
 
   public void sync() {
@@ -92,8 +123,9 @@ public class EfgsSyncer {
     logger.info("Start sync from: " + baseUrl);
     LocalDate today = LocalDate.now();
     try {
-      //download(today);
-      upload();
+      //setupCallback();
+      //download();
+      //upload();
     } catch (Exception e) {
       logger.error("Exception downloading keys:", e);
     }
@@ -102,6 +134,62 @@ public class EfgsSyncer {
     logger.info("Sync done in: " + (end - start) + " [ms]");
   }
 
+  private void deleteCallback(String callbackId) {
+	  
+      UriComponentsBuilder builder =
+              UriComponentsBuilder.fromHttpUrl(
+                  baseUrl + String.format(CALLBACK_PATH_WITH_ID, callbackId));
+      URI uri = builder.build().toUri();
+      logger.info("DELETE request to: " + uri.toString());
+      RequestEntity<Void> request =
+              RequestEntity.delete(builder.build().toUri())
+                  .build();
+      ResponseEntity<Void> response = restTemplate.exchange(request, Void.class);
+      
+
+  }
+  
+  private void putCallback(String callbackId, String url) {
+	  
+      UriComponentsBuilder builder =
+              UriComponentsBuilder.fromHttpUrl(
+                  baseUrl + String.format(CALLBACK_PATH_WITH_ID, callbackId) + "?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8));
+      URI uri = builder.build().toUri();
+      logger.info("PUT request to: " + uri.toString());
+      RequestEntity<Void> request =
+              RequestEntity.put(builder.build().toUri())
+                  .build();
+      ResponseEntity<Void> response = restTemplate.exchange(request, Void.class);
+      
+
+  }
+
+  private void setupCallback() {
+	  
+    UriComponentsBuilder builder =
+    		UriComponentsBuilder.fromHttpUrl(baseUrl + CALLBACK_PATH);
+      
+    URI uri = builder.build().toUri();
+    logger.info("GET request to: " + uri.toString());
+    RequestEntity<Void> request = 
+    		RequestEntity.get(builder.build().toUri())
+            .accept(MediaType.APPLICATION_JSON)
+            .build();
+    ResponseEntity<Callback[]> response = restTemplate.exchange(request, Callback[].class);
+    List<Callback> callbacks = List.of(response.getBody());
+    callbacks.stream().forEach(cb -> {
+      if (cb.getCallbackId().equals(efgsCallbackId) && 
+    		  !cb.getUrl().equals(efgsCallbackUrl)) {
+        putCallback(efgsCallbackId, efgsCallbackUrl);
+      } else {
+         deleteCallback(cb.getCallbackId());
+      }});
+      if (callbacks.size() == 0) {
+        putCallback(efgsCallbackId, efgsCallbackUrl);
+      }	  
+	  
+  }
+  
   private void upload() throws Exception {
 
 	  var now = UTCInstant.now();
@@ -178,22 +266,78 @@ public class EfgsSyncer {
 	  
   }
   
-  private void download(LocalDate today) throws URISyntaxException {
-    LocalDate endDate = today.minusDays(efgsMaxAgeDays);
-    LocalDate dayDate = endDate;
-    logger.info("Start download: " + endDate + " - " + today);
-    List<EfgsProto.DiagnosisKey> receivedKeys = new ArrayList<>();
-    while (dayDate.isBefore(today.plusDays(1))) {
-      String lastBatchTagForDay = syncStateService.getLastDownloadedBatchTag(dayDate);
-      logger.info(
+  public Callable<Long> startDownload(LocalDate dayDate, String startBatchTag) {
+
+	return new Callable<Long>() {
+
+		@Override
+		public Long call() throws Exception {
+			return download(dayDate, startBatchTag);
+		}
+	};
+  }
+
+  public long download(LocalDate dayDate, String startBatchTag) {
+	synchronized (MUTEX) {
+	  logger.info("Start download: " + dayDate + " with batchTag " + startBatchTag);
+      List<EfgsProto.DiagnosisKey> receivedKeys = new ArrayList<>();
+      receivedKeys.addAll(doDownload(dayDate, startBatchTag, false).diagnosisKey);
+      saveDiagnosisKeys(receivedKeys);
+      return receivedKeys.size();		
+	}
+  }
+  
+  private void download() {
+	synchronized (MUTEX) {
+	    LocalDate today = LocalDate.now();
+		LocalDate dayDate = today.minusDays(efgsMaxAgeDays);
+	    logger.info("Start download: " + dayDate + " - " + today);
+	    List<EfgsProto.DiagnosisKey> receivedKeys = new ArrayList<>();
+	    while (dayDate.isBefore(today.plusDays(1))) {
+	      String lastBatchTagForDay = syncStateService.getLastDownloadedBatchTag(dayDate);
+	      DownloadResult res = doDownload(dayDate, lastBatchTagForDay, lastBatchTagForDay != null);
+	      receivedKeys.addAll(res.diagnosisKey);
+	      this.syncStateService.setLastDownloadedBatchTag(dayDate, res.lastDownloadedBatchTag);
+	      dayDate = dayDate.plusDays(1);
+	      if (receivedKeys.size() >= efgsMaxDownloadKeys) {
+	    	dayDate = today.plusDays(1);
+	      }
+	    }
+	
+	    saveDiagnosisKeys(receivedKeys);
+	}
+  }
+
+  private void saveDiagnosisKeys(List<EfgsProto.DiagnosisKey> receivedKeys) {
+	UTCInstant now = UTCInstant.now();
+    logger.info("Received " + receivedKeys.size() + " keys. Store ...");
+    for (EfgsProto.DiagnosisKey diagKey : receivedKeys) {
+      GaenKeyInternal gaenKey = mapToGaenKey(diagKey);
+      if (diagKey.getOrigin() != null
+          && !diagKey.getOrigin().isBlank()
+          && !diagKey.getVisitedCountriesList().isEmpty()) {
+        gaenDataService.upsertExposee(gaenKey, now);
+      }
+    }
+  }
+
+  @AllArgsConstructor
+  private static class DownloadResult {
+	  List<EfgsProto.DiagnosisKey> diagnosisKey;
+	  String lastDownloadedBatchTag;
+  }
+  
+  private DownloadResult doDownload(LocalDate dayDate, String startBatchTag, boolean discardFirstBatch) {
+	 logger.info(
           "Download keys for: "
               + dayDate
               + " from BatchTag: "
-              + (lastBatchTagForDay != null ? lastBatchTagForDay : " none"));
+              + (startBatchTag != null ? startBatchTag : " none"));
 
+      List<EfgsProto.DiagnosisKey> receivedKeys = new ArrayList<>();
       boolean done = false;
 
-  	String currentBatchTagForDay = lastBatchTagForDay; 
+  	  String currentBatchTagForDay = startBatchTag; 
       while (!done) {
         UriComponentsBuilder builder =
             UriComponentsBuilder.fromHttpUrl(
@@ -207,9 +351,20 @@ public class EfgsSyncer {
                 .accept(MediaType.parseMediaType("application/protobuf; version=1.0"))
                 .headers(createDownloadHeaders(currentBatchTagForDay))
                 .build();
-        ResponseEntity<EfgsProto.DiagnosisKeyBatch> response =
+        ResponseEntity<EfgsProto.DiagnosisKeyBatch> response = null;
+        try {
+        	response =
         		restTemplate.exchange(request, EfgsProto.DiagnosisKeyBatch.class);
 
+        } catch (HttpClientErrorException e) {
+        	if (e.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+        		done = true;
+        		logger.info(e.getResponseBodyAsString());
+        		continue;
+        	} else {
+        		throw e;
+        	}
+        }
         if (response.getStatusCode().is2xxSuccessful()) {
           if (response.getStatusCode().equals(HttpStatus.OK)) {
         	EfgsProto.DiagnosisKeyBatch downloadResponse = response.getBody();
@@ -223,40 +378,34 @@ public class EfgsSyncer {
                     + " Number of keys: "
                     + downloadResponse.getKeysCount());
             
-            receivedKeys.addAll(downloadResponse.getKeysList());
+            if (!discardFirstBatch) {
+                receivedKeys.addAll(downloadResponse.getKeysList());
+            } else {
+            	logger.info("Discarding batch " + batchTag);
+            }
+            discardFirstBatch = false;
             
             if ("null".equals(nextBatchTag)) {
                 logger.info("Got empty nextBatchTag. Store last batch tag");
                 // no more keys to load. store last batch tag for next sync
-                this.syncStateService.setLastDownloadedBatchTag(dayDate, currentBatchTagForDay);
             	done = true;
-            } else if (receivedKeys.size() >= efgsMaxDownloadKeys) {
+            	currentBatchTagForDay = batchTag;
+            	continue;
+            } 
+            if (receivedKeys.size() >= efgsMaxDownloadKeys) {
                 logger.info("Exceeded efgsMaxDownloadKeys. Stopping download");
                 // no more keys to load. store last batch tag for next sync
-                this.syncStateService.setLastDownloadedBatchTag(dayDate, "null".equals(nextBatchTag) ? currentBatchTagForDay : nextBatchTag);
-            	done = true;            	
-            	dayDate = today.plusDays(1);
-            } else {
-            	currentBatchTagForDay = nextBatchTag;            	
+            	done = true;
+            	currentBatchTagForDay = batchTag;
+            	continue;
             }
+            currentBatchTagForDay = nextBatchTag;            	
             
           }
         }
       }
-      dayDate = dayDate.plusDays(1);
-    }
-
-    UTCInstant now = UTCInstant.now();
-    logger.info("Received " + receivedKeys.size() + " keys. Store ...");
-    for (EfgsProto.DiagnosisKey diagKey : receivedKeys) {
-      GaenKeyInternal gaenKey = mapToGaenKey(diagKey);
-      if (diagKey.getOrigin() != null
-          && !diagKey.getOrigin().isBlank()
-          && !diagKey.getVisitedCountriesList().isEmpty()) {
-        gaenDataService.upsertExposee(gaenKey, now);
-      }
-    }
-  }
+	return new DownloadResult(receivedKeys, currentBatchTagForDay);
+}
 
   private GaenKeyInternal mapToGaenKey(EfgsProto.DiagnosisKey diagKey) {
     GaenKeyInternal gaenKey = new GaenKeyInternal();
@@ -272,11 +421,11 @@ public class EfgsSyncer {
   }
 
   private HttpHeaders createUploadHeaders(UTCInstant batchTag, String signature) {
-	    HttpHeaders headers = new HttpHeaders();
-        headers.add("batchTag", String.valueOf(batchTag.get10MinutesSince1970()));    	
-        headers.add("batchSignature", signature);
-	    return headers;
-	  }
+    HttpHeaders headers = new HttpHeaders();
+    headers.add("batchTag", String.valueOf(batchTag.get10MinutesSince1970()));    	
+    headers.add("batchSignature", signature);
+    return headers;
+  }
 
   private HttpHeaders createDownloadHeaders(String batchTag) {
     HttpHeaders headers = new HttpHeaders();

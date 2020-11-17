@@ -100,9 +100,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     params.addValue("rollingPeriodStartNumberStart", keyDate.get10MinutesSince1970());
     params.addValue("rollingPeriodStartNumberEnd", keyDate.plusDays(1).get10MinutesSince1970());
     params.addValue("publishedUntil", publishedUntil.getDate());
-	List<String> forCountries = List.of(originCountry);
-	if (international)
-		forCountries.addAll(allOtherCountries);
+	List<String> forCountries = countriesOfInterest(international);
     params.addValue("origins", forCountries);
     params.addValue("countries", forCountries);
     
@@ -139,6 +137,14 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     return aggregateByCountry(keys);
     
   }
+
+private List<String> countriesOfInterest(boolean international) {
+	List<String> forCountries = new ArrayList<>();
+	forCountries.add(originCountry);
+	if (international)
+		forCountries.addAll(allOtherCountries);
+	return forCountries;
+}
 
   private List<GaenKeyInternal> aggregateByCountry(List<GaenKeyInternal> keys) {
 	Map<String, List<GaenKeyInternal>> groupedKeys = keys.stream().collect(Collectors.groupingBy(GaenKeyInternal::getKeyData));
@@ -331,10 +337,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 
   @Override
   public List<GaenKeyInternal> getSortedExposedSince(UTCInstant keysSince, UTCInstant now, boolean international) {
-	List<String> forCountries = List.of(originCountry);
-	if (international)
-		forCountries.addAll(allOtherCountries);
-	return this.getSortedExposedSince(keysSince, now, forCountries);
+	return this.getSortedExposedSince(keysSince, now, countriesOfInterest(international));
   }
 
 }

@@ -11,5 +11,9 @@ public interface SyncStateService {
 	Long getLastUploadKeyBundleTag();
 	
 	void setLastUploadKeyBundleTag(Long lastUploadKeyBundleTag);
+	
+	void saveCallback(String id, String url);
+	
+	Callback getCallbackSub(String id);
 
 }
