@@ -123,9 +123,8 @@ public class EfgsSyncer {
     logger.info("Start sync from: " + baseUrl);
     LocalDate today = LocalDate.now();
     try {
-      //setupCallback();
-      //download();
-      //upload();
+      download();
+      upload();
     } catch (Exception e) {
       logger.error("Exception downloading keys:", e);
     }

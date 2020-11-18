@@ -41,6 +41,8 @@ import org.dpppt.backend.sdk.interops.batchsigning.SignatureGenerator;
 import org.dpppt.backend.sdk.interops.syncer.EfgsSyncer;
 import org.dpppt.backend.sdk.interops.syncer.InMemorySyncStateService;
 import org.dpppt.backend.sdk.interops.syncer.SyncStateService;
+import org.dpppt.backend.sdk.interops.utils.BufferingClientHttpResponseWrapper;
+import org.dpppt.backend.sdk.interops.utils.ContentTypeCorrectionInterceptor;
 import org.dpppt.backend.sdk.interops.utils.LoggingRequestInterceptor;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
@@ -167,7 +169,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
 		taskRegistrar.addFixedRateTask(new IntervalTask(() -> {
 			efgsSyncer.sync();
-		}, 20000));
+		}, 60000));
 	}
 
 	private static final int CONNECT_TIMEOUT = 20000;
@@ -197,23 +199,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 				.build();
 		
 		List<ClientHttpRequestInterceptor> interceptors = rt.getInterceptors();
-		interceptors.add(new ClientHttpRequestInterceptor() {
-
-			@Override
-			public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
-					throws IOException {
-				ClientHttpResponse response = execution.execute(request, body);
-				if (response.getHeaders().containsKey("Content-Type")) {
-					String contentType = response.getHeaders().getContentType().toString();
-					if (contentType.equals("application/protobuf; version=1.0")) {
-				        response.getHeaders().set("Content-Type", "application/x-protobuf");					
-					}					
-				}
-		        return response;			
-		    }
-			
-			
-		});
+		interceptors.add(new ContentTypeCorrectionInterceptor());
 		interceptors.add(new LoggingRequestInterceptor());
 		rt.setInterceptors(interceptors);
 		return rt;
