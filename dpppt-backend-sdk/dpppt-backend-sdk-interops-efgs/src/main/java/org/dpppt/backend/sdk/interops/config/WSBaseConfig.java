@@ -11,7 +11,6 @@
 package org.dpppt.backend.sdk.interops.config;
 
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -30,8 +29,6 @@ import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.ssl.SSLContexts;
@@ -41,7 +38,6 @@ import org.dpppt.backend.sdk.interops.batchsigning.SignatureGenerator;
 import org.dpppt.backend.sdk.interops.syncer.EfgsSyncer;
 import org.dpppt.backend.sdk.interops.syncer.InMemorySyncStateService;
 import org.dpppt.backend.sdk.interops.syncer.SyncStateService;
-import org.dpppt.backend.sdk.interops.utils.BufferingClientHttpResponseWrapper;
 import org.dpppt.backend.sdk.interops.utils.ContentTypeCorrectionInterceptor;
 import org.dpppt.backend.sdk.interops.utils.LoggingRequestInterceptor;
 import org.flywaydb.core.Flyway;
@@ -54,12 +50,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.HttpRequest;
-import org.springframework.http.client.BufferingClientHttpRequestFactory;
-import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
-import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -183,12 +175,6 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	
 	@Bean
 	public RestTemplate restTemplate(RestTemplateBuilder builder, ProtobufHttpMessageConverter hmc) throws Exception {
-		/*char[] password = tlsKeystorePass.toCharArray();
-
-		SSLContext sslContext = SSLContextBuilder.create()
-				.setProtocol("TLS")
-				.loadKeyMaterial(keyStore(tlsKeystore, password), password)
-				.loadTrustMaterial(null, new TrustSelfSignedStrategy()).build();*/
 
 		Supplier<ClientHttpRequestFactory> s1 = () -> new HttpComponentsClientHttpRequestFactory(
 				createHttpClient());
@@ -241,28 +227,6 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
         		.setUserAgent("dp3t-interop")
         		.build();
     }
-
-	private CloseableHttpClient httpClient(SSLContext sslContext) {
-		PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
-		manager.setDefaultMaxPerRoute(20);
-		manager.setMaxTotal(30);
-
-		// Create HttpClientBuilder using system properties including proxy settings
-		HttpClientBuilder builder = HttpClients.custom()
-				.setSSLContext(sslContext)
-				.useSystemProperties()
-				.setUserAgent("dp3t-interop");
-		
-		builder.setConnectionManager(manager)
-			.disableCookieManagement()
-			.setDefaultRequestConfig(
-				RequestConfig.custom()
-					.setConnectTimeout(CONNECT_TIMEOUT)
-					.setSocketTimeout(SOCKET_TIMEOUT)
-					.build());
-		
-		return builder.build();
-	}
 
 	private KeyStore keyStore(String file, char[] password) throws Exception {
 		KeyStore keyStore = KeyStore.getInstance("PKCS12");
