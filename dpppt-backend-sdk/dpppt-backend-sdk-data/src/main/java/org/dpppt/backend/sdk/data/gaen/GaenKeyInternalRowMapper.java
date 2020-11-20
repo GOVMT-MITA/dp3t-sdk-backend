@@ -17,9 +17,13 @@ public class GaenKeyInternalRowMapper implements RowMapper<GaenKeyInternal> {
     gaenKey.setKeyData(rs.getString("key"));
     gaenKey.setRollingStartNumber(rs.getInt("rolling_start_number"));
     gaenKey.setRollingPeriod(rs.getInt("rolling_period"));
+    
     List<String> countries = new ArrayList<>();
-    countries.add(rs.getString("country"));
+    if (null != rs.getObject("country")) {
+        countries.add(rs.getString("country"));    	
+    }    
     gaenKey.setCountries(countries);
+    
     gaenKey.setFake(0);
     gaenKey.setTransmissionRiskLevel(0);
     gaenKey.setDaysSinceOnsetOfSymptoms(rs.getInt("days_since_onset_of_symptoms"));

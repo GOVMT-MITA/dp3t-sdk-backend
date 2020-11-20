@@ -51,7 +51,6 @@ public class GaenDataServiceTest {
     tmpKey.setFake(0);
     tmpKey.setTransmissionRiskLevel(0);
     tmpKey.setOrigin("CH");
-    tmpKey.setCountries(List.of("CH"));
     var tmpKey2 = new GaenKeyInternal();
     tmpKey2.setRollingStartNumber(
         (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
@@ -60,7 +59,6 @@ public class GaenDataServiceTest {
     tmpKey2.setFake(0);
     tmpKey2.setTransmissionRiskLevel(0);
     tmpKey2.setOrigin("CH");
-    tmpKey2.setCountries(List.of("CH"));
     List<GaenKeyInternal> keys = List.of(tmpKey, tmpKey2);
     var now = UTCInstant.now();
     gaenDataService.upsertExposees(keys, now);
@@ -88,7 +86,6 @@ public class GaenDataServiceTest {
     tmpKey.setFake(0);
     tmpKey.setTransmissionRiskLevel(0);
     tmpKey.setOrigin("CH");
-    tmpKey.setCountries(List.of("CH"));
     var tmpKey2 = new GaenKeyInternal();
     tmpKey2.setRollingStartNumber(
         (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
@@ -97,7 +94,7 @@ public class GaenDataServiceTest {
     tmpKey2.setFake(0);
     tmpKey2.setTransmissionRiskLevel(0);
     tmpKey2.setOrigin("CH");
-    tmpKey2.setCountries(List.of("CH","IE","DE"));
+    tmpKey2.setCountries(List.of("IE","DE"));
     List<GaenKeyInternal> keys = List.of(tmpKey, tmpKey2);
     var now = UTCInstant.now();
     gaenDataService.upsertExposees(keys, now);
@@ -129,7 +126,6 @@ public class GaenDataServiceTest {
       tmpKey.setFake(0);
       tmpKey.setTransmissionRiskLevel(0);
       tmpKey.setOrigin("CH");
-      tmpKey.setCountries(List.of("CH"));
       
       gaenDataService.upsertExposees(List.of(tmpKey), now);
     }
@@ -170,7 +166,6 @@ public class GaenDataServiceTest {
       tmpKey.setFake(0);
       tmpKey.setTransmissionRiskLevel(0);
       tmpKey.setOrigin("CH");
-      tmpKey.setCountries(List.of("CH"));
 
       gaenDataService.upsertExposees(List.of(tmpKey), now);
     }
@@ -206,7 +201,6 @@ public class GaenDataServiceTest {
     tmpKey.setFake(0);
     tmpKey.setTransmissionRiskLevel(0);
     tmpKey.setOrigin("CH");
-    tmpKey.setCountries(List.of("CH"));
     var tmpKey2 = new GaenKeyInternal();
     tmpKey2.setRollingStartNumber(
         (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
@@ -215,7 +209,6 @@ public class GaenDataServiceTest {
     tmpKey2.setFake(0);
     tmpKey2.setTransmissionRiskLevel(0);
     tmpKey2.setOrigin("CH");
-    tmpKey2.setCountries(List.of("CH"));
     List<GaenKeyInternal> keys = List.of(tmpKey, tmpKey2);
     var now = UTCInstant.now();
     gaenDataService.upsertExposees(keys, now);
@@ -244,7 +237,6 @@ public class GaenDataServiceTest {
     tmpKey.setFake(0);
     tmpKey.setTransmissionRiskLevel(0);
     tmpKey.setOrigin("CH");
-    tmpKey.setCountries(List.of("CH"));
     var tmpKey2 = new GaenKeyInternal();
     tmpKey2.setRollingStartNumber(
         (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
@@ -253,7 +245,7 @@ public class GaenDataServiceTest {
     tmpKey2.setFake(0);
     tmpKey2.setTransmissionRiskLevel(0);
     tmpKey2.setOrigin("CH");
-    tmpKey2.setCountries(List.of("CH","DE"));
+    tmpKey2.setCountries(List.of("DE"));
     var tmpKey3 = new GaenKeyInternal();
     tmpKey3.setRollingStartNumber(
         (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
@@ -262,7 +254,7 @@ public class GaenDataServiceTest {
     tmpKey3.setFake(0);
     tmpKey3.setTransmissionRiskLevel(0);
     tmpKey3.setOrigin("IT");
-    tmpKey3.setCountries(List.of("IT","DE","CH"));
+    tmpKey3.setCountries(List.of("DE","CH"));
     var tmpKey4 = new GaenKeyInternal();
     tmpKey4.setRollingStartNumber(
             (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
@@ -271,7 +263,6 @@ public class GaenDataServiceTest {
     tmpKey4.setFake(0);
     tmpKey4.setTransmissionRiskLevel(0);
     tmpKey4.setOrigin("DE");
-    tmpKey4.setCountries(List.of("DE"));
     var tmpKey5 = new GaenKeyInternal();
     tmpKey5.setRollingStartNumber(
             (int) UTCInstant.today().minus(Duration.ofDays(1)).get10MinutesSince1970());
@@ -280,7 +271,6 @@ public class GaenDataServiceTest {
     tmpKey5.setFake(0);
     tmpKey5.setTransmissionRiskLevel(0);
     tmpKey5.setOrigin("IE");
-    tmpKey5.setCountries(List.of("IE"));
     
     
     List<GaenKeyInternal> keys = List.of(tmpKey, tmpKey2, tmpKey3, tmpKey4, tmpKey5);

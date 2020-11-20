@@ -177,7 +177,6 @@ public class PostgresGaenDataServiceTest {
     tmpKey.setRollingPeriod(144);
     tmpKey.setFake(0);
     tmpKey.setOrigin("CH");
-    tmpKey.setCountries(List.of("CH"));
     List<GaenKeyInternal> keys = List.of(tmpKey);
 
     gaenDataService.upsertExposees(keys, UTCInstant.now());
@@ -225,21 +224,12 @@ public class PostgresGaenDataServiceTest {
     String sql =
         "into t_gaen_exposed (pk_exposed_id, key, received_at, rolling_start_number,"
             + " rolling_period, origin) values (100, ?, ?, ?, 144, 'CH')";
-    PreparedStatement preparedStatement = connection.prepareStatement("insert " + sql, Statement.RETURN_GENERATED_KEYS);
+    PreparedStatement preparedStatement = connection.prepareStatement("insert " + sql);
     preparedStatement.setString(1, key);
     preparedStatement.setTimestamp(2, new Timestamp(receivedAt.toEpochMilli()));
     preparedStatement.setInt(
         3, (int) GaenUnit.TenMinutes.between(Instant.ofEpochMilli(0), keyDate));
     preparedStatement.executeUpdate();
-    
-    ResultSet rs = preparedStatement.getGeneratedKeys();
-
-    if (rs.next()) {
-        long pk = rs.getLong(1);
-        PreparedStatement stmtCountry = connection.prepareStatement("insert into t_visited (pfk_exposed_id, country) values (" + pk + ", 'CH')");
-        stmtCountry.executeUpdate();
-    }
-    
     
   }
 

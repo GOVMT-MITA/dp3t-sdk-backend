@@ -41,7 +41,7 @@ public InteropKeyModifier(int retentionDays, boolean interopEnabled, List<String
 }
 
 
-@Override
+  @Override
   public List<GaenKeyInternal> modify(
       UTCInstant now,
       List<GaenKeyInternal> content,
@@ -59,19 +59,14 @@ public InteropKeyModifier(int retentionDays, boolean interopEnabled, List<String
 
 	for (GaenKeyInternal gaenKey : content) {		
 		var keyDate = UTCInstant.of(gaenKey.getRollingStartNumber() * 10, ChronoUnit.MINUTES);
-		long daysSinceOnsetOfSymptoms = ChronoUnit.DAYS.between(keyDate.getInstant(), onsetDate.getInstant());
+		long daysSinceOnsetOfSymptoms = ChronoUnit.DAYS.between(onsetDate.getInstant(), keyDate.getInstant());
 		gaenKey.setDaysSinceOnsetOfSymptoms((int) daysSinceOnsetOfSymptoms);		
 		if (null == countries) {
-		    countries = List.of(originCountry);
-		    if (interopEnabled) {
-		    	countries.addAll(otherCountries);
-		    }		
-		} else {
-			// Make sure origin country is in the list
-			if (!countries.contains(originCountry)) {
-				countries.add(originCountry);
-			}
+			countries = Lists.newArrayList();
 		}
+		if (countries.isEmpty() && interopEnabled) {
+	    	countries.addAll(otherCountries);
+		}		
 		gaenKey.setCountries(countries);
 		gaenKey.setOrigin(originCountry);
 	}

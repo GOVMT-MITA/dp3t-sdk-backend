@@ -100,19 +100,19 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     params.addValue("rollingPeriodStartNumberStart", keyDate.get10MinutesSince1970());
     params.addValue("rollingPeriodStartNumberEnd", keyDate.plusDays(1).get10MinutesSince1970());
     params.addValue("publishedUntil", publishedUntil.getDate());
-	List<String> forCountries = countriesOfInterest(international);
-    params.addValue("origins", forCountries);
-    params.addValue("countries", forCountries);
+    List<String> coi = countriesOfInterest(international);
+    params.addValue("origins", coi);
+    params.addValue("countries", coi);
     
     String sql =
         "select keys.pk_exposed_id, keys.key, keys.rolling_start_number, keys.rolling_period, "
     		+ " keys.report_type, keys.days_since_onset_of_symptoms, keys.origin, v.country"
             + " from t_gaen_exposed "
-            + " as keys inner join t_visited v on keys.pk_exposed_id = v.pfk_exposed_id"
+            + " as keys left outer join t_visited v on keys.pk_exposed_id = v.pfk_exposed_id"
         	+ " where keys.rolling_start_number >= :rollingPeriodStartNumberStart"
             + " and keys.rolling_start_number < :rollingPeriodStartNumberEnd and keys.received_at <"
             + " :publishedUntil and"
-            + " (v.country in (:countries) OR keys.origin in (:origins))";
+            + " (keys.origin in (:origins) OR v.country in (:countries))";
     // we need to subtract the time skew since we want to release it iff rolling_start_number +
     // rolling_period + timeSkew < NOW
     // note though that since we use `<` instead of `<=` a key which is valid until 24:00 will be
@@ -138,14 +138,14 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     
   }
 
-private List<String> countriesOfInterest(boolean international) {
+  private List<String> countriesOfInterest(boolean international) {
 	List<String> forCountries = new ArrayList<>();
 	forCountries.add(originCountry);
 	if (international)
 		forCountries.addAll(allOtherCountries);
 	return forCountries;
-}
-
+  }
+  
   private List<GaenKeyInternal> aggregateByCountry(List<GaenKeyInternal> keys) {
 	Map<String, List<GaenKeyInternal>> groupedKeys = keys.stream().collect(Collectors.groupingBy(GaenKeyInternal::getKeyData));
     
@@ -194,7 +194,7 @@ private List<String> countriesOfInterest(boolean international) {
 	            + " rolling_period, received_at,  "
 	            + getSQLExpressionForExpiry()
 	            + " as expiry, days_since_onset_of_symptoms, report_type, origin from t_gaen_exposed)"
-	            + " as keys inner join t_visited v on keys.pk_exposed_id = v.pfk_exposed_id"
+	            + " as keys left outer join t_visited v on keys.pk_exposed_id = v.pfk_exposed_id"
 	            + " where keys.origin = :origin and ((keys.received_at >= :since AND"
 	            + " keys.received_at < :maxBucket AND keys.expiry <= keys.received_at) OR (keys.expiry"
 	            + " >= :since AND keys.expiry < :maxBucket AND keys.expiry > keys.received_at))";
@@ -238,8 +238,8 @@ private List<String> countriesOfInterest(boolean international) {
             + " rolling_period, received_at,  "
             + getSQLExpressionForExpiry()
             + " as expiry, days_since_onset_of_symptoms, report_type, origin from t_gaen_exposed)"
-            + " as keys inner join t_visited v on keys.pk_exposed_id = v.pfk_exposed_id"
-            + " where (v.country in (:countries) OR keys.origin in (:origins)) and ((keys.received_at >= :since AND"
+            + " as keys left outer join t_visited v on keys.pk_exposed_id = v.pfk_exposed_id"
+            + " where (keys.origin in (:origins) OR v.country in (:countries)) and ((keys.received_at >= :since AND"
             + " keys.received_at < :maxBucket AND keys.expiry <= keys.received_at) OR (keys.expiry"
             + " >= :since AND keys.expiry < :maxBucket AND keys.expiry > keys.received_at))";
 
