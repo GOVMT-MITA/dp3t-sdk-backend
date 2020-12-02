@@ -60,7 +60,6 @@ public class FakeKeyService {
         key.setOrigin(originCountry);
         key.setReportType("CONFIRMED_TEST");
         key.setDaysSinceOnsetOfSymptoms(14);
-        key.setCountries(List.of(originCountry));
         keys.add(key);
       }
       // TODO: Check if currentKeyDate is indeed intended here
