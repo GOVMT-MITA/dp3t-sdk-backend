@@ -90,11 +90,17 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	@Value("${ws.interops.efgs.signature.password:}")
 	public String signKeystorePass;
 
+	@Value("${ws.interops.efgs.signature.alias:}")
+	public String signCertAlias;
+
 	@Value("${ws.interops.efgs.tls.keystore:}")
 	private String tlsKeystore;
 
 	@Value("${ws.interops.efgs.tls.password:}")
 	public String tlsKeystorePass;
+
+	@Value("${ws.interops.efgs.tls.alias:}")
+	public String tlsCertAlias;
 
 	@Value("${ws.interops.efgs.tls.truststore:}")
 	private String tlsTruststore;
@@ -166,7 +172,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
 		taskRegistrar.addFixedRateTask(new IntervalTask(() -> {
 			efgsSyncer.sync();
-		}, 60000));
+		}, releaseBucketDuration));
 	}
 
 	private static final int CONNECT_TIMEOUT = 20000;
@@ -201,7 +207,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
         final SSLContext sslContext;
         try {
             sslContext = SSLContexts.custom()
-                .loadKeyMaterial(keyStore(tlsKeystore, password), password, (aliases, socket) -> "covidalert")
+                .loadKeyMaterial(keyStore(tlsKeystore, password), password, (aliases, socket) -> tlsCertAlias)
                 .loadTrustMaterial(null, (x509Certificates, s) -> false)
                 .build();
         } catch (Exception e) {
@@ -249,9 +255,9 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	public SignatureGenerator signatureGenerator() throws Exception {
 		char[] password = signKeystorePass.toCharArray();
 		KeyStore keystore = keyStore(signKeystore, password);
-		X509Certificate certificate = (X509Certificate) keystore.getCertificate("covidalert");
-		PrivateKey privateKey = (PrivateKey) keystore.getKey("covidalert", password);
-		return new SignatureGenerator(certificate, privateKey);
-		
+		X509Certificate certificate = (X509Certificate) keystore.getCertificate(signCertAlias);
+		PrivateKey privateKey = (PrivateKey) keystore.getKey(signCertAlias, password);
+		return new SignatureGenerator(certificate, privateKey);		
 	}
+	
 }
