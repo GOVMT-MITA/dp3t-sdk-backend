@@ -20,6 +20,8 @@
 	<properties>
 		<start-class>org.dpppt.backend.sdk.interops.Application</start-class>
 		<sonar.projectKey>DP-3T_dp3t-sdk-backend</sonar.projectKey>
+		
+		<protobuf-format.version>1.4</protobuf-format.version>
 	</properties>
 
 	<dependencies>
@@ -88,11 +90,16 @@
 		    <groupId>com.google.protobuf</groupId>
 		    <artifactId>protobuf-java</artifactId>
 	    </dependency>
-<dependency>
-    <groupId>com.google.protobuf</groupId>
-    <artifactId>protobuf-java-util</artifactId>
-    <version>3.13.0</version>
-</dependency>
+		<dependency>
+		    <groupId>com.google.protobuf</groupId>
+		    <artifactId>protobuf-java-util</artifactId>
+		    <version>3.13.0</version>
+		</dependency>
+		<dependency>
+		    <groupId>com.googlecode.protobuf-java-format</groupId>
+		    <artifactId>protobuf-java-format</artifactId>
+		    <version>${protobuf-format.version}</version>
+		</dependency>
 	    
 	</dependencies>
 

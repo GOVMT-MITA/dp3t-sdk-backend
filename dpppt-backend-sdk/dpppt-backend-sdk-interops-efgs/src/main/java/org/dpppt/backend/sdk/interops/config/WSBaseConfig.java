@@ -38,8 +38,8 @@ import org.dpppt.backend.sdk.interops.batchsigning.SignatureGenerator;
 import org.dpppt.backend.sdk.interops.syncer.EfgsSyncer;
 import org.dpppt.backend.sdk.interops.syncer.InMemorySyncStateService;
 import org.dpppt.backend.sdk.interops.syncer.SyncStateService;
-import org.dpppt.backend.sdk.interops.utils.ContentTypeCorrectionInterceptor;
 import org.dpppt.backend.sdk.interops.utils.LoggingRequestInterceptor;
+import org.dpppt.backend.sdk.interops.utils.ProtobufHttpMessageConverter;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +55,6 @@ import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.http.converter.protobuf.ProtobufHttpMessageConverter;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.IntervalTask;
@@ -115,6 +114,12 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	@Value("${ws.interops.efgs.callback.url}")
 	String efgsCallbackUrl;
 
+	@Value("${ws.interops.efgs.protobuf.version:1.0}")
+	String efgsProtobufVersion;
+
+	@Value("${ws.interops.efgs.json.version:1.0}")
+	String efgsJsonVersion;
+	
 	protected final Logger logger = LoggerFactory.getLogger(getClass());
 
 	public abstract DataSource dataSource();
@@ -169,7 +174,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 
 	@Bean
 	ProtobufHttpMessageConverter protobufHttpMessageConverter() {
-		ProtobufHttpMessageConverter hmc = new ProtobufHttpMessageConverter();
+		ProtobufHttpMessageConverter hmc = new ProtobufHttpMessageConverter(efgsProtobufVersion, efgsJsonVersion);
 		return hmc;
     }
 	
@@ -185,7 +190,6 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 				.build();
 		
 		List<ClientHttpRequestInterceptor> interceptors = rt.getInterceptors();
-		interceptors.add(new ContentTypeCorrectionInterceptor());
 		interceptors.add(new LoggingRequestInterceptor());
 		rt.setInterceptors(interceptors);
 		return rt;
