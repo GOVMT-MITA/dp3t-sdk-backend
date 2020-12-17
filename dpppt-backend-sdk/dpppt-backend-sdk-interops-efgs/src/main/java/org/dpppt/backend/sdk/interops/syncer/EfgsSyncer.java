@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -373,15 +374,19 @@ public class EfgsSyncer {
                 "Got 200. BatchTag: "
                     + batchTag
                     + " NextBatchTag: "
-                    + nextBatchTag 
-                    + " Number of keys: "
-                    + downloadResponse.getKeysCount());
+                    + nextBatchTag);
             
-            if (!discardFirstBatch) {
-                receivedKeys.addAll(downloadResponse.getKeysList());
+            if (null == downloadResponse) {
+            	logger.warn("Got a null body");
             } else {
-            	logger.info("Discarding batch " + batchTag);
-            }
+                logger.info(" Number of keys: "
+                        + downloadResponse.getKeysCount());            	
+                if (!discardFirstBatch) {
+                    receivedKeys.addAll(downloadResponse.getKeysList());
+                } else {
+                	logger.info("Discarding batch " + batchTag);
+                }
+            }            
             discardFirstBatch = false;
             
             if ("null".equals(nextBatchTag)) {
@@ -407,8 +412,8 @@ public class EfgsSyncer {
 }
 
   private GaenKeyInternal mapToGaenKey(EfgsProto.DiagnosisKey diagKey) {
-    GaenKeyInternal gaenKey = new GaenKeyInternal();
-    gaenKey.setKeyData(diagKey.getKeyData().toStringUtf8());
+    GaenKeyInternal gaenKey = new GaenKeyInternal();    
+    gaenKey.setKeyData(Base64.getEncoder().encodeToString(diagKey.getKeyData().toByteArray()));
     gaenKey.setRollingPeriod(diagKey.getRollingPeriod());
     gaenKey.setRollingStartNumber(diagKey.getRollingStartIntervalNumber());
     gaenKey.setFake(0);

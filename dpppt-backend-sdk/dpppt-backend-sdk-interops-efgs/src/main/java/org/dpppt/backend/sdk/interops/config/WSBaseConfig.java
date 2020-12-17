@@ -111,7 +111,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	@Value("${ws.interops.efgs.download.maxkeys: 100000}")
 	long efgsMaxDownloadKeys;
 
-	@Value("${ws.interops.efgs.upload.maxkeys: 2}")
+	@Value("${ws.interops.efgs.upload.maxkeys: 100000}")
 	long efgsMaxUploadKeys;
 
 	@Value("${ws.interops.efgs.callback.id}")
@@ -192,11 +192,11 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 		
 		RestTemplate rt = builder
 				.requestFactory(s1)
-				.messageConverters(hmc, new ByteArrayHttpMessageConverter(), new MappingJackson2HttpMessageConverter())
+				.messageConverters(hmc, new ByteArrayHttpMessageConverter())
 				.build();
 		
 		List<ClientHttpRequestInterceptor> interceptors = rt.getInterceptors();
-		interceptors.add(new LoggingRequestInterceptor());
+		//interceptors.add(new LoggingRequestInterceptor());
 		rt.setInterceptors(interceptors);
 		return rt;
 
