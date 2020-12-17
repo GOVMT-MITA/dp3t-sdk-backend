@@ -28,6 +28,9 @@ COPY ./ws/bin/dpppt-backend-sdk-interops-efgs.jar /home/ws/bin/dpppt-backend-sdk
 ADD ./ws/conf/dpppt-backend-sdk-ws-logback-${targetenv}.xml /home/ws/conf/dpppt-backend-sdk-ws-logback.xml
 ADD ./ws/conf/dpppt-backend-sdk-ws-${targetenv}.properties /home/ws/conf/dpppt-backend-sdk-ws.properties
 
+# Copy key stores
+COPY ./ws/conf/*.p12 /home/ws/conf/
+
 RUN chown -R ws:ws /home/ws
 
 USER ws
