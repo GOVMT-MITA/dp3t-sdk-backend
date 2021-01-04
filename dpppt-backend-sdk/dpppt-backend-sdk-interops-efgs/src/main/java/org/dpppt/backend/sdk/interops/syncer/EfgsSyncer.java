@@ -30,6 +30,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -308,15 +309,21 @@ public class EfgsSyncer {
 	}
   }
 
+  @Transactional(readOnly = false)
   private void saveDiagnosisKeys(List<EfgsProto.DiagnosisKey> receivedKeys) {
 	UTCInstant now = UTCInstant.now();
     logger.info("Received " + receivedKeys.size() + " keys. Store ...");
+    long count = 0;
     for (EfgsProto.DiagnosisKey diagKey : receivedKeys) {
       GaenKeyInternal gaenKey = mapToGaenKey(diagKey);
       if (diagKey.getOrigin() != null
           && !diagKey.getOrigin().isBlank()
           && !diagKey.getVisitedCountriesList().isEmpty()) {
         gaenDataService.upsertExposee(gaenKey, now);
+        count++;
+        if (count % 1000 == 0) {
+        	logger.info("Stored " + count + " of " + receivedKeys.size() + ".");
+        }
       }
     }
   }

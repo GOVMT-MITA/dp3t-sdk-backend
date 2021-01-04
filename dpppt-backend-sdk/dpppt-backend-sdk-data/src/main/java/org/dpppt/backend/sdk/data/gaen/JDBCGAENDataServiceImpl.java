@@ -66,6 +66,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
   }
 
   @Override
+  @Transactional(readOnly = false)
   public void upsertExposee(
       GaenKeyInternal gaenKey, UTCInstant now) {
     internalUpsertKey(gaenKey, now);
