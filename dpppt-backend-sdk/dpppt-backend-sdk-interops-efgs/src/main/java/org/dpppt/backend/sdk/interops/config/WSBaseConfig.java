@@ -38,7 +38,7 @@ import org.dpppt.backend.sdk.interops.batchsigning.SignatureGenerator;
 import org.dpppt.backend.sdk.interops.syncer.EfgsSyncer;
 import org.dpppt.backend.sdk.interops.syncer.InMemorySyncStateService;
 import org.dpppt.backend.sdk.interops.syncer.SyncStateService;
-import org.dpppt.backend.sdk.interops.utils.LoggingRequestInterceptor;
+import org.dpppt.backend.sdk.interops.utils.MappingJackson2HttpMessageConverter;
 import org.dpppt.backend.sdk.interops.utils.ProtobufHttpMessageConverter;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
@@ -54,7 +54,6 @@ import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.IntervalTask;
@@ -192,7 +191,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 		
 		RestTemplate rt = builder
 				.requestFactory(s1)
-				.messageConverters(hmc, new ByteArrayHttpMessageConverter())
+				.messageConverters(hmc, new ByteArrayHttpMessageConverter(), new MappingJackson2HttpMessageConverter())
 				.build();
 		
 		List<ClientHttpRequestInterceptor> interceptors = rt.getInterceptors();
