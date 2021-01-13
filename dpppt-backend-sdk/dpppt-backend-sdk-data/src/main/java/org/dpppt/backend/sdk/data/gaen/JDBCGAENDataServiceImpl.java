@@ -10,6 +10,7 @@
 
 package org.dpppt.backend.sdk.data.gaen;
 
+import java.math.BigInteger;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +34,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
   private static final Logger logger = LoggerFactory.getLogger(JDBCGAENDataServiceImpl.class);
 
   private static final String PGSQL = "pgsql";
+  private static final String MYSQL = "mysql";
   private final String dbType;
   private final NamedParameterJdbcTemplate jt;
   private final Duration releaseBucketDuration;
@@ -106,14 +108,14 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     params.addValue("countries", coi);
     
     String sql =
-        "select keys.pk_exposed_id, keys.key, keys.rolling_start_number, keys.rolling_period, "
-    		+ " keys.report_type, keys.days_since_onset_of_symptoms, keys.origin, v.country"
+        "select keyz.pk_exposed_id, keyz.key, keyz.rolling_start_number, keyz.rolling_period, "
+    		+ " keyz.report_type, keyz.days_since_onset_of_symptoms, keyz.origin, v.country"
             + " from t_gaen_exposed "
-            + " as keys left outer join t_visited v on keys.pk_exposed_id = v.pfk_exposed_id"
-        	+ " where keys.rolling_start_number >= :rollingPeriodStartNumberStart"
-            + " and keys.rolling_start_number < :rollingPeriodStartNumberEnd and keys.received_at <"
+            + " as keyz left outer join t_visited v on keyz.pk_exposed_id = v.pfk_exposed_id"
+        	+ " where keyz.rolling_start_number >= :rollingPeriodStartNumberStart"
+            + " and keyz.rolling_start_number < :rollingPeriodStartNumberEnd and keyz.received_at <"
             + " :publishedUntil and"
-            + " (keys.origin in (:origins) OR v.country in (:countries))";
+            + " (keyz.origin in (:origins) OR v.country in (:countries))";
     // we need to subtract the time skew since we want to release it iff rolling_start_number +
     // rolling_period + timeSkew < NOW
     // note though that since we use `<` instead of `<=` a key which is valid until 24:00 will be
@@ -189,18 +191,18 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 	    // TO_TIMESTAMP((rolling_start_number + rolling_period) * 10 * 60 + :timeSkewSeconds
 
 	    String sql =
-	        "select keys.pk_exposed_id, keys.key, keys.rolling_start_number,"
-	            + " keys.rolling_period, keys.origin, keys.days_since_onset_of_symptoms, keys.report_type, v.country"
-	        	+ " from (select pk_exposed_id, key, rolling_start_number,"
+	        "select keyz.pk_exposed_id, keyz.key, keyz.rolling_start_number,"
+	            + " keyz.rolling_period, keyz.origin, keyz.days_since_onset_of_symptoms, keyz.report_type, v.country"
+	        	+ " from (select pk_exposed_id, ge.key, rolling_start_number,"
 	            + " rolling_period, received_at,  "
 	            + getSQLExpressionForExpiry()
-	            + " as expiry, days_since_onset_of_symptoms, report_type, origin from t_gaen_exposed)"
-	            + " as keys left outer join t_visited v on keys.pk_exposed_id = v.pfk_exposed_id"
-	            + " where keys.origin = :origin and ((keys.received_at >= :since AND"
-	            + " keys.received_at < :maxBucket AND keys.expiry <= keys.received_at) OR (keys.expiry"
-	            + " >= :since AND keys.expiry < :maxBucket AND keys.expiry > keys.received_at))";
+	            + " as expiry, days_since_onset_of_symptoms, report_type, origin from t_gaen_exposed ge)"
+	            + " as keyz left outer join t_visited v on keyz.pk_exposed_id = v.pfk_exposed_id"
+	            + " where keyz.origin = :origin and ((keyz.received_at >= :since AND"
+	            + " keyz.received_at < :maxBucket AND keyz.expiry <= keyz.received_at) OR (keyz.expiry"
+	            + " >= :since AND keyz.expiry < :maxBucket AND keyz.expiry > keyz.received_at))";
 
-	    sql += " order by keys.pk_exposed_id desc";
+	    sql += " order by keyz.pk_exposed_id desc";
 
 	    List<GaenKeyInternal> keys = jt.query(sql, params, new GaenKeyInternalRowMapper());
 	    return aggregateByCountry(keys);
@@ -233,18 +235,18 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     // TO_TIMESTAMP((rolling_start_number + rolling_period) * 10 * 60 + :timeSkewSeconds
 
     String sql =
-        "select keys.pk_exposed_id, keys.key, keys.rolling_start_number,"
-            + " keys.rolling_period, keys.origin, keys.days_since_onset_of_symptoms, keys.report_type, v.country"
-            + " from (select pk_exposed_id, key, rolling_start_number,"
+        "select keyz.pk_exposed_id, keyz.key, keyz.rolling_start_number,"
+            + " keyz.rolling_period, keyz.origin, keyz.days_since_onset_of_symptoms, keyz.report_type, v.country"
+            + " from (select pk_exposed_id, ge.key, rolling_start_number,"
             + " rolling_period, received_at,  "
             + getSQLExpressionForExpiry()
-            + " as expiry, days_since_onset_of_symptoms, report_type, origin from t_gaen_exposed)"
-            + " as keys left outer join t_visited v on keys.pk_exposed_id = v.pfk_exposed_id"
-            + " where (keys.origin in (:origins) OR v.country in (:countries)) and ((keys.received_at >= :since AND"
-            + " keys.received_at < :maxBucket AND keys.expiry <= keys.received_at) OR (keys.expiry"
-            + " >= :since AND keys.expiry < :maxBucket AND keys.expiry > keys.received_at))";
+            + " as expiry, days_since_onset_of_symptoms, report_type, origin from t_gaen_exposed ge)"
+            + " as keyz left outer join t_visited v on keyz.pk_exposed_id = v.pfk_exposed_id"
+            + " where (keyz.origin in (:origins) OR v.country in (:countries)) and ((keyz.received_at >= :since AND"
+            + " keyz.received_at < :maxBucket AND keyz.expiry <= keyz.received_at) OR (keyz.expiry"
+            + " >= :since AND keyz.expiry < :maxBucket AND keyz.expiry > keyz.received_at))";
 
-    sql += " order by keys.pk_exposed_id desc";
+    sql += " order by keyz.pk_exposed_id desc";
 
     List<GaenKeyInternal> keys = jt.query(sql, params, new GaenKeyInternalRowMapper());
     return aggregateByCountry(keys);
@@ -276,7 +278,15 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
       GaenKeyInternal gaenKey, UTCInstant receivedAt) {
     String sqlKey = null;
     String sqlVisited = null;
-    if (dbType.equals(PGSQL)) {
+    if (dbType.equals(MYSQL)) {
+        sqlKey =
+            "insert into t_gaen_exposed (`key`, rolling_start_number, rolling_period,"
+                + " received_at, origin, days_since_onset_of_symptoms, report_type) values (:key, :rolling_start_number,"
+                + " :rolling_period, :received_at, :origin, :days_since_onset_of_symptoms, :report_type) "
+                + " ON DUPLICATE KEY UPDATE `key`=`key`";
+        sqlVisited =
+            "insert ignore into t_visited (pfk_exposed_id, country) values (:keyId, :country) ";
+    } else if (dbType.equals(PGSQL)) {
       sqlKey =
           "insert into t_gaen_exposed (key, rolling_start_number, rolling_period,"
               + " received_at, origin, days_since_onset_of_symptoms, report_type) values (:key, :rolling_start_number,"
@@ -319,9 +329,20 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     // if the key already exists, no ids are returned. in this case we assume that we do not need
     // to modify the visited countries also
     if (keyHolder.getKeys() != null && !keyHolder.getKeys().isEmpty()) {
-      Object keyObject = keyHolder.getKeys().get("pk_exposed_id");
-      if (keyObject != null) {
-        int gaenKeyId = ((Integer) keyObject).intValue();
+      Object keyObject = null;
+      if (dbType.equals(MYSQL)) {
+    	  keyObject = keyHolder.getKeys().get("GENERATED_KEY");
+      } else {
+    	  keyObject = keyHolder.getKeys().get("pk_exposed_id");    	  
+      }
+      if (keyObject != null) {    	  
+        Object gaenKeyId = null;        
+        if (dbType.equals(MYSQL)) {
+        	gaenKeyId = ((BigInteger) keyObject);
+        } else {
+        	gaenKeyId = ((Integer) keyObject);
+        }
+        
         for (String country : gaenKey.getCountries()) {
           MapSqlParameterSource visitedParams = new MapSqlParameterSource();
           visitedParams.addValue("keyId", gaenKeyId);

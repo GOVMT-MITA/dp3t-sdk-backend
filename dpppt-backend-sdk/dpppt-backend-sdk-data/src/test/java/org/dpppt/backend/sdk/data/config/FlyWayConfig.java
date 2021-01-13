@@ -46,6 +46,15 @@ public class FlyWayConfig {
   }
 
   @Bean
+  @Profile("mysql")
+  public Flyway flywayMySql() {
+    Flyway flyWay =
+        Flyway.configure().dataSource(dataSource).locations("classpath:/db/migration/mysql").load();
+    flyWay.migrate();
+    return flyWay;
+  }
+
+  @Bean
   public Flyway fakeFlyway() {
     Flyway flyWay =
         Flyway.configure()
