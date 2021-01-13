@@ -35,6 +35,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 
@@ -113,7 +114,9 @@ public class EfgsSyncer {
   
   public void init() {
     try {
-        setupCallback();
+    	if (!Strings.isNullOrEmpty(this.efgsCallbackId)) {    		
+    		setupCallback();
+    	}
       } catch (Exception e) {
         logger.error("Exception while setting up callback subscription:", e);
       }
