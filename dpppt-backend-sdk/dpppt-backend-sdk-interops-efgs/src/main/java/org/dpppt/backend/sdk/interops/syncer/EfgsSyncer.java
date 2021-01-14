@@ -5,6 +5,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -15,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
+
+import org.dpppt.backend.sdk.data.gaen.FakeKeyService;
 import org.dpppt.backend.sdk.data.gaen.GAENDataService;
 import org.dpppt.backend.sdk.interops.batchsigning.SignatureGenerator;
 import org.dpppt.backend.sdk.interops.model.EfgsProto;
@@ -56,6 +59,10 @@ public class EfgsSyncer {
   private final int efgsMaxAgeDays;
   private final long efgsMaxDownloadKeys;
   private final long efgsMaxUploadKeys;
+  private final long efgsMinUploadKeys;
+  private final SecureRandom random;
+  private final Integer fakeKeySize;
+  private final boolean fakeKeysEnabled;
   private final String originCountry;
   private final GAENDataService gaenDataService;
   
@@ -89,6 +96,9 @@ public class EfgsSyncer {
       int efgsMaxAgeDays,
       long efgsMaxDownloadKeys,
       long efgsMaxUploadKeys,
+      boolean fakeKeysEnabled,
+      long efgsMinUploadKeys,
+      Integer fakeKeySize,
       String originCountry,
       Duration releaseBucketDuration,
       GAENDataService gaenDataService,
@@ -102,6 +112,8 @@ public class EfgsSyncer {
     this.efgsMaxAgeDays = efgsMaxAgeDays;
     this.efgsMaxDownloadKeys = efgsMaxDownloadKeys;
     this.efgsMaxUploadKeys = efgsMaxUploadKeys;
+    this.fakeKeysEnabled = fakeKeysEnabled;
+    this.efgsMinUploadKeys = efgsMinUploadKeys;
     this.originCountry = originCountry;
     this.gaenDataService = gaenDataService;
     this.restTemplate = restTemplate;
@@ -110,6 +122,8 @@ public class EfgsSyncer {
     this.syncStateService = syncStateService;
     this.efgsCallbackId = efgsCallbackId;
     this.efgsCallbackUrl = efgsCallbackUrl;
+    this.random = new SecureRandom();
+    this.fakeKeySize = fakeKeySize;
   }
   
   public void init() {
@@ -214,10 +228,14 @@ public class EfgsSyncer {
 		  till = now.minus(releaseBucketDuration.multipliedBy(multiplier++));		  
 	  } while (exposedKeys.size() > this.efgsMaxUploadKeys);
 	  UTCInstant keyBundleTag = till.roundToBucketStart(releaseBucketDuration);
+
+	  exposedKeys.addAll(fillupKeys(now, exposedKeys));
 	  
 	  if (exposedKeys.isEmpty()) {
 		  logger.info("No keys to upload");
 		  return;
+	  } else {
+		  logger.info("Uploading " + exposedKeys.size() + " keys.");
 	  }
 	  
 	  List<EfgsProto.DiagnosisKey> diagnosisKeys = exposedKeys.stream().map(ek -> {
@@ -268,6 +286,26 @@ public class EfgsSyncer {
             	logger.error("Upload failed with code " + response.getStatusCodeValue() + " and message " + response.getBody());
             }
 	  
+  }
+
+  private List<GaenKeyInternal> fillupKeys(UTCInstant now, List<GaenKeyInternal> exposedKeys) {
+	var fakeKeys = new ArrayList<GaenKeyInternal>();
+	if (fakeKeysEnabled) {
+	  for (int i = exposedKeys.size(); i < efgsMinUploadKeys; i++) {
+	    byte[] keyData = new byte[fakeKeySize];
+	    random.nextBytes(keyData);
+	    var keyGAENTime = (int) now.atStartOfDay().get10MinutesSince1970();
+	    var key = new GaenKeyInternal();
+	    key.setKeyData(Base64.getEncoder().encodeToString(keyData));
+	    key.setRollingStartNumber(keyGAENTime);
+	    key.setRollingPeriod(144);
+	    key.setOrigin(originCountry);
+	    key.setReportType("CONFIRMED_TEST");
+	    key.setDaysSinceOnsetOfSymptoms(14);
+	    fakeKeys.add(key);
+	  }	      
+    }
+	return fakeKeys;
   }
   
   public Callable<Long> startDownload(LocalDate dayDate, String startBatchTag) {

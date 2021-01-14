@@ -16,7 +16,9 @@ import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.function.Supplier;
 
 import javax.net.ssl.SSLContext;
@@ -54,10 +56,14 @@ import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
+import org.springframework.scheduling.config.CronTask;
 import org.springframework.scheduling.config.IntervalTask;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
+import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -107,11 +113,20 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	@Value("${ws.interops.efgs.maxage: 2}")
 	int efgsMaxAgeDays;
 	
-	@Value("${ws.interops.efgs.download.maxkeys: 100000}")
+	@Value("${ws.interops.efgs.download.maxkeys: 10000}")
 	long efgsMaxDownloadKeys;
 
-	@Value("${ws.interops.efgs.upload.maxkeys: 100000}")
+	@Value("${ws.interops.efgs.upload.maxkeys: 10000}")
 	long efgsMaxUploadKeys;
+
+	@Value("${ws.interops.efgs.upload.minkeys: 150}")
+	int efgsMinUploadKeys;
+
+	@Value("${ws.interops.efgs.fakekeysenabled: true}")
+	boolean fakekeysenabled;
+
+	@Value("${ws.app.gaen.key_size: 16}")
+	int gaenKeySizeBytes;
 
 	@Value("${ws.interops.efgs.callback.id}")
 	String efgsCallbackId;
@@ -151,6 +166,9 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 				efgsMaxAgeDays, 
 				efgsMaxDownloadKeys, 
 				efgsMaxUploadKeys, 
+				fakekeysenabled,
+				efgsMinUploadKeys,
+				gaenKeySizeBytes,
 				originCountry, 
 				Duration.ofMillis(releaseBucketDuration), 
 				gaenDataService, 
@@ -167,11 +185,13 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	@Lazy
 	EfgsSyncer efgsSyncer;
 
+    
 	@Override
 	public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
 		taskRegistrar.addFixedRateTask(new IntervalTask(() -> {
 			efgsSyncer.sync();
 		}, releaseBucketDuration));
+
 	}
 
 	private static final int CONNECT_TIMEOUT = 20000;

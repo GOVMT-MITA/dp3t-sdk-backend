@@ -90,4 +90,17 @@ public class FakeKeyService {
     keys.addAll(fakeKeys);
     return keys;
   }
+
+  public List<GaenKeyInternal> fillUpKeys(
+	      List<GaenKeyInternal> keys, UTCInstant keysSince, UTCInstant now) {
+	    if (!isEnabled) {
+	      return keys;
+	    }
+	    var fakeKeys =
+	        this.dataService.getSortedExposedSince(keysSince, now, originCountry);
+
+	    keys.addAll(fakeKeys);
+	    return keys;
+	  }
+
 }
