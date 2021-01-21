@@ -58,6 +58,7 @@ public class EfgsSyncer {
   private final int retentionDays;
   private final int efgsMaxAgeDays;
   private final long efgsMaxDownloadKeys;
+  private final LocalDate efgsDownloadNotBefore;
   private final long efgsMaxUploadKeys;
   private final long efgsMinUploadKeys;
   private final SecureRandom random;
@@ -95,6 +96,7 @@ public class EfgsSyncer {
       int retentionDays,
       int efgsMaxAgeDays,
       long efgsMaxDownloadKeys,
+      LocalDate efgsDownloadNotBefore,
       long efgsMaxUploadKeys,
       boolean fakeKeysEnabled,
       long efgsMinUploadKeys,
@@ -111,6 +113,7 @@ public class EfgsSyncer {
     this.retentionDays = retentionDays;
     this.efgsMaxAgeDays = efgsMaxAgeDays;
     this.efgsMaxDownloadKeys = efgsMaxDownloadKeys;
+    this.efgsDownloadNotBefore = efgsDownloadNotBefore;
     this.efgsMaxUploadKeys = efgsMaxUploadKeys;
     this.fakeKeysEnabled = fakeKeysEnabled;
     this.efgsMinUploadKeys = efgsMinUploadKeys;
@@ -333,6 +336,9 @@ public class EfgsSyncer {
 	synchronized (MUTEX) {
 	    LocalDate today = LocalDate.now();
 		LocalDate dayDate = today.minusDays(efgsMaxAgeDays);
+		if (dayDate.isBefore(efgsDownloadNotBefore)) {
+			dayDate = efgsDownloadNotBefore.plusDays(0); // Make a copy
+		}
 	    logger.info("Start download: " + dayDate + " - " + today);
 	    List<EfgsProto.DiagnosisKey> receivedKeys = new ArrayList<>();
 	    while (dayDate.isBefore(today.plusDays(1))) {

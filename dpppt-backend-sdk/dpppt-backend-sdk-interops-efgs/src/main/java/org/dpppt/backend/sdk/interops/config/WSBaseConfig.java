@@ -16,6 +16,7 @@ import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.TimeZone;
@@ -110,22 +111,25 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	@Value("${ws.interops.efgs.tls.truststore:}")
 	private String tlsTruststore;
 	
-	@Value("${ws.interops.efgs.maxage: 2}")
+	@Value("${ws.interops.efgs.maxage:2}")
 	int efgsMaxAgeDays;
 	
-	@Value("${ws.interops.efgs.download.maxkeys: 10000}")
+	@Value("${ws.interops.efgs.download.notbefore:1970-01-01}")
+	String efgsDownloadNotBefore;
+
+	@Value("${ws.interops.efgs.download.maxkeys:10000}")
 	long efgsMaxDownloadKeys;
 
-	@Value("${ws.interops.efgs.upload.maxkeys: 10000}")
+	@Value("${ws.interops.efgs.upload.maxkeys:10000}")
 	long efgsMaxUploadKeys;
 
-	@Value("${ws.interops.efgs.upload.minkeys: 150}")
+	@Value("${ws.interops.efgs.upload.minkeys:150}")
 	int efgsMinUploadKeys;
 
-	@Value("${ws.interops.efgs.fakekeysenabled: true}")
+	@Value("${ws.interops.efgs.fakekeysenabled:true}")
 	boolean fakekeysenabled;
 
-	@Value("${ws.app.gaen.key_size: 16}")
+	@Value("${ws.app.gaen.key_size:16}")
 	int gaenKeySizeBytes;
 
 	@Value("${ws.interops.efgs.callback.id}")
@@ -164,7 +168,8 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 		EfgsSyncer syncer = new EfgsSyncer(efgsBaseUrl, 
 				retentionDays, 
 				efgsMaxAgeDays, 
-				efgsMaxDownloadKeys, 
+				efgsMaxDownloadKeys,
+				LocalDate.parse(efgsDownloadNotBefore),
 				efgsMaxUploadKeys, 
 				fakekeysenabled,
 				efgsMinUploadKeys,
@@ -211,7 +216,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 		
 		RestTemplate rt = builder
 				.requestFactory(s1)
-				.messageConverters(hmc, new ByteArrayHttpMessageConverter(), new MappingJackson2HttpMessageConverter())
+				.messageConverters(hmc, new ByteArrayHttpMessageConverter()) //, new MappingJackson2HttpMessageConverter())
 				.build();
 		
 		List<ClientHttpRequestInterceptor> interceptors = rt.getInterceptors();
