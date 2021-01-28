@@ -14,6 +14,7 @@ public class GaenKeyInternalRowMapper implements RowMapper<GaenKeyInternal> {
   @Override
   public GaenKeyInternal mapRow(ResultSet rs, int rowNum) throws SQLException {
     var gaenKey = new GaenKeyInternal();
+    gaenKey.setPk(rs.getLong("pk_exposed_id"));
     gaenKey.setKeyData(rs.getString("key"));
     gaenKey.setRollingStartNumber(rs.getInt("rolling_start_number"));
     gaenKey.setRollingPeriod(rs.getInt("rolling_period"));
@@ -30,6 +31,9 @@ public class GaenKeyInternalRowMapper implements RowMapper<GaenKeyInternal> {
     gaenKey.setOrigin(rs.getString("origin"));
     gaenKey.setReportType(rs.getString("report_type"));
     
+    gaenKey.setReceivedAt(rs.getTimestamp("received_at").toInstant());
+    gaenKey.setExpiresAt(rs.getTimestamp("expires_at").toInstant());
+   	
     return gaenKey;
   }
 }

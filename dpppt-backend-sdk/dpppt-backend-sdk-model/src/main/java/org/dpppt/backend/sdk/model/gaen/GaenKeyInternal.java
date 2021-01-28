@@ -1,10 +1,12 @@
 package org.dpppt.backend.sdk.model.gaen;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
 public class GaenKeyInternal {
 	
+	private Long pk;
 	private String keyData;
 	private Integer rollingStartNumber;
 	private Integer rollingPeriod;
@@ -14,7 +16,33 @@ public class GaenKeyInternal {
 	private String origin;
 	private String reportType;
 	private Integer fake = 0;
-	
+	private Instant receivedAt;
+	private Instant expiresAt;
+
+	public Long getPk() {
+		return pk;
+	}
+
+	public void setPk(Long pk) {
+		this.pk = pk;
+	}
+
+	public Instant getReceivedAt() {
+		return receivedAt;
+	}
+
+	public void setReceivedAt(Instant receivedAt) {
+		this.receivedAt = receivedAt;
+	}
+
+	public Instant getExpiresAt() {
+		return expiresAt;
+	}
+
+	public void setExpiresAt(Instant expiresAt) {
+		this.expiresAt = expiresAt;
+	}
+
 	public String getKeyData() {
 		return keyData;
 	}

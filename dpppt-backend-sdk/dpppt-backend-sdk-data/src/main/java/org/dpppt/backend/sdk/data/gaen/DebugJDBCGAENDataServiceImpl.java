@@ -79,7 +79,7 @@ public class DebugJDBCGAENDataServiceImpl implements DebugGAENDataService {
       UTCInstant batchReleaseTime, Duration releaseBucketDuration) {
     String sql =
         "select pk_exposed_id, device_name, key, rolling_start_number, rolling_period,"
-            + " transmission_risk_level, '" + originCountry + "' as country, '" + originCountry + "' as origin, "
+            + " transmission_risk_level, '" + originCountry + "' as country, '" + originCountry + "' as origin, received_at, received_at as expires_at, "
             + " 'CONFIRMED_TEST' as report_type, 14 as days_since_onset_of_symptoms"
             + " from t_debug_gaen_exposed where received_at >= :startBatch"
             + " and received_at < :batchReleaseTime order by pk_exposed_id desc";

@@ -1434,9 +1434,9 @@ public class GaenControllerTest extends BaseControllerTest {
     for (int d = 0; d < daysBack; d++) {
       var currentKeyDate = lastDay.minusDays(d);
       int currentRollingStartNumber = (int) currentKeyDate.get10MinutesSince1970();
-      List<GaenKey> keys = new ArrayList<>();
+      List<GaenKeyInternal> keys = new ArrayList<>();
       for (int n = 0; n < keysPerDay; n++) {
-        GaenKey key = new GaenKey();
+        GaenKeyInternal key = new GaenKeyInternal();
         byte[] keyBytes = new byte[16];
         random.nextBytes(keyBytes);
         key.setKeyData(Base64.getEncoder().encodeToString(keyBytes));
@@ -1444,6 +1444,9 @@ public class GaenControllerTest extends BaseControllerTest {
         key.setRollingStartNumber(currentRollingStartNumber);
         key.setTransmissionRiskLevel(1);
         key.setFake(0);
+        key.setOrigin("CH");
+        key.setDaysSinceOnsetOfSymptoms(14);
+        key.setReportType("CONFIRMED_TEST");
         keys.add(key);
       }
       if (debug) {

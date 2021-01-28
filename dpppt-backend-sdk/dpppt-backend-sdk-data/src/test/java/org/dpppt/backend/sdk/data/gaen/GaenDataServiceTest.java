@@ -69,7 +69,7 @@ public class GaenDataServiceTest {
 
     var returnedKeys =
         gaenDataService.getSortedExposedForKeyDate(
-            UTCInstant.today().minusDays(1), null, publishedUntil, now, false);
+            UTCInstant.today().minusDays(1), UTCInstant.midnight1970(), publishedUntil, now, false);
 
     assertEquals(keys.size(), returnedKeys.size());
     assertEquals(keys.get(1).getKeyData(), returnedKeys.get(0).getKeyData());
@@ -118,13 +118,14 @@ public class GaenDataServiceTest {
         Clock.fixed(outerNow.atStartOfDay().plusHours(14).getInstant(), ZoneOffset.UTC);
 
     try (var now = UTCInstant.setClock(twoOClock)) {
-      var tmpKey = new GaenKey();
+      var tmpKey = new GaenKeyInternal();
       tmpKey.setRollingStartNumber((int) now.atStartOfDay().get10MinutesSince1970());
       tmpKey.setKeyData(Base64.getEncoder().encodeToString("testKey32Bytes--".getBytes("UTF-8")));
       tmpKey.setRollingPeriod(
           (int) Duration.ofHours(10).dividedBy(GaenUnit.TenMinutes.getDuration()));
       tmpKey.setFake(0);
       tmpKey.setTransmissionRiskLevel(0);
+      tmpKey.setOrigin("CH");
 
       gaenDataService.upsertExposees(List.of(tmpKey), now);
     }
@@ -134,13 +135,13 @@ public class GaenDataServiceTest {
 
     // eleven O'clock no key
     try (var now = UTCInstant.setClock(elevenOClock)) {
-      var returnedKeys = gaenDataService.getSortedExposedSince(now.minusDays(10), now);
+      var returnedKeys = gaenDataService.getSortedExposedSince(now.minusDays(10), now, false);
       assertEquals(0, returnedKeys.size());
     }
 
-    // twelve O'clock release the key
+    // 14 O'clock release the key
     try (var now = UTCInstant.setClock(fourteenOClock)) {
-      var returnedKeys = gaenDataService.getSortedExposedSince(now.minusDays(10), now);
+      var returnedKeys = gaenDataService.getSortedExposedSince(now.minusDays(10), now, false);
       assertEquals(1, returnedKeys.size());
     }
   }
@@ -158,13 +159,15 @@ public class GaenDataServiceTest {
         Clock.fixed(outerNow.atStartOfDay().plusHours(14).getInstant(), ZoneOffset.UTC);
 
     try (var now = UTCInstant.setClock(twoOClock)) {
-      var tmpKey = new GaenKey();
+      var tmpKey = new GaenKeyInternal();
       tmpKey.setRollingStartNumber((int) now.atStartOfDay().get10MinutesSince1970());
       tmpKey.setKeyData(Base64.getEncoder().encodeToString("testKey32Bytes--".getBytes("UTF-8")));
       tmpKey.setRollingPeriod(
           (int) Duration.ofHours(10).dividedBy(GaenUnit.TenMinutes.getDuration()));
       tmpKey.setFake(0);
       tmpKey.setTransmissionRiskLevel(0);
+      tmpKey.setOrigin("CH");
+      tmpKey.setCountries(List.of("CH"));
 
       gaenDataService.upsertExposees(List.of(tmpKey), now);
     }
@@ -176,9 +179,9 @@ public class GaenDataServiceTest {
       UTCInstant publishedUntil = now.roundToBucketStart(BUCKET_LENGTH);
       var returnedKeysV1 =
           gaenDataService.getSortedExposedForKeyDate(
-              now.atStartOfDay(), UTCInstant.midnight1970(), publishedUntil, now);
+              now.atStartOfDay(), UTCInstant.midnight1970(), publishedUntil, now, false);
       assertEquals(0, returnedKeysV1.size());
-      var returnedKeysV2 = gaenDataService.getSortedExposedSince(UTCInstant.midnight1970(), now);
+      var returnedKeysV2 = gaenDataService.getSortedExposedSince(UTCInstant.midnight1970(), now, false);
       assertEquals(0, returnedKeysV2.size());
     }
 
@@ -187,9 +190,9 @@ public class GaenDataServiceTest {
       UTCInstant publishedUntil = now.roundToBucketStart(BUCKET_LENGTH);
       var returnedKeysV1 =
           gaenDataService.getSortedExposedForKeyDate(
-              now.atStartOfDay(), UTCInstant.midnight1970(), publishedUntil, now);
+              now.atStartOfDay(), UTCInstant.midnight1970(), publishedUntil, now, false);
       assertEquals(1, returnedKeysV1.size());
-      var returnedKeysV2 = gaenDataService.getSortedExposedSince(UTCInstant.midnight1970(), now);
+      var returnedKeysV2 = gaenDataService.getSortedExposedSince(UTCInstant.midnight1970(), now, false);
       assertEquals(1, returnedKeysV2.size());
     }
   }
@@ -223,7 +226,7 @@ public class GaenDataServiceTest {
 
     var returnedKeys =
         gaenDataService.getSortedExposedForKeyDate(
-            UTCInstant.today().minusDays(1), null, publishedUntil, now, false);
+            UTCInstant.today().minusDays(1), UTCInstant.midnight1970(), publishedUntil, now, false);
 
     assertEquals(1, returnedKeys.size());
     assertEquals(keys.get(1).getKeyData(), returnedKeys.get(0).getKeyData());
@@ -307,13 +310,13 @@ public class GaenDataServiceTest {
 
     returnedKeys =
             gaenDataService.getSortedExposedForKeyDate(
-                UTCInstant.today().minusDays(1), null, publishedUntil, now, false);
+                UTCInstant.today().minusDays(1), UTCInstant.midnight1970(), publishedUntil, now, false);
     
     assertEquals(3, returnedKeys.size());
 
     returnedKeys =
             gaenDataService.getSortedExposedForKeyDate(
-                UTCInstant.today().minusDays(1), null, publishedUntil, now, true);
+                UTCInstant.today().minusDays(1), UTCInstant.midnight1970(), publishedUntil, now, true);
     
     assertEquals(4, returnedKeys.size());
 

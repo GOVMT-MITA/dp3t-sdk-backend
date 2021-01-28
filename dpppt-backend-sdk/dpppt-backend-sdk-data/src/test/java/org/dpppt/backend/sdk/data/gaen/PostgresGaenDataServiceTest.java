@@ -10,7 +10,7 @@
 
 package org.dpppt.backend.sdk.data.gaen;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -45,6 +45,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.AnnotationConfigContextLoader;
+import org.springframework.transaction.annotation.Transactional;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(
@@ -83,7 +84,7 @@ public class PostgresGaenDataServiceTest {
       var noKeyAtThisDate = today.minusDays(22);
       var keysUntilToday = today.minusDays(21);
 
-      var keys = new ArrayList<GaenKey>();
+      var keys = new ArrayList<GaenKeyInternal>();
       var emptyList =
           fakeKeyService.fillUpKeys(keys, UTCInstant.midnight1970(), noKeyAtThisDate, now);
       assertEquals(0, emptyList.size());
@@ -157,7 +158,7 @@ public class PostgresGaenDataServiceTest {
     insertExposeeWithReceivedAtAndKeyDate(
         receivedAt.getInstant(), receivedAt.minusDays(1).getInstant(), key);
 
-    List<GaenKey> sortedExposedForDay =
+    List<GaenKeyInternal> sortedExposedForDay =
         gaenDataService.getSortedExposedForKeyDate(
             receivedAt.minusDays(1), UTCInstant.midnight1970(), now, now, false);
 
@@ -194,7 +195,8 @@ public class PostgresGaenDataServiceTest {
             UTCInstant.today().minus(Duration.ofDays(1)),
             UTCInstant.midnight1970(),
             publishedUntil,
-            now);
+            now, 
+            false);
 
     assertEquals(keys.size(), returnedKeys.size());
     assertEquals(keys.get(0).getKeyData(), returnedKeys.get(0).getKeyData());
