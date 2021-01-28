@@ -322,7 +322,9 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
         keyVault.get("nextDayJWT").getPrivate(),
         interopEnabled,
         otherCountries,
-        originCountry);
+        originCountry,
+        Duration.ofDays(retentionDays));
+
   }
 
   @Bean
