@@ -65,6 +65,7 @@ public class EfgsSyncer {
   private final Integer fakeKeySize;
   private final boolean fakeKeysEnabled;
   private final String originCountry;
+  private final List<String> otherCountries;
   private final GAENDataService gaenDataService;
   
   private final Duration releaseBucketDuration;
@@ -102,6 +103,7 @@ public class EfgsSyncer {
       long efgsMinUploadKeys,
       Integer fakeKeySize,
       String originCountry,
+      List<String> otherCountries,
       Duration releaseBucketDuration,
       GAENDataService gaenDataService,
       RestTemplate restTemplate,
@@ -118,6 +120,7 @@ public class EfgsSyncer {
     this.fakeKeysEnabled = fakeKeysEnabled;
     this.efgsMinUploadKeys = efgsMinUploadKeys;
     this.originCountry = originCountry;
+    this.otherCountries = otherCountries;
     this.gaenDataService = gaenDataService;
     this.restTemplate = restTemplate;
     this.releaseBucketDuration = releaseBucketDuration;
@@ -174,7 +177,7 @@ public class EfgsSyncer {
 	  
       UriComponentsBuilder builder =
               UriComponentsBuilder.fromHttpUrl(
-                  baseUrl + String.format(CALLBACK_PATH_WITH_ID, callbackId) + "?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8));
+                  baseUrl + String.format(CALLBACK_PATH_WITH_ID, callbackId) + "?url=" + url); // URLEncoder.encode(url, StandardCharsets.UTF_8));
       URI uri = builder.build().toUri();
       logger.info("PUT request to: " + uri.toString());
       RequestEntity<Void> request =
@@ -199,15 +202,10 @@ public class EfgsSyncer {
     ResponseEntity<Callback[]> response = restTemplate.exchange(request, Callback[].class);
     List<Callback> callbacks = List.of(response.getBody());
     callbacks.stream().forEach(cb -> {
-      if (cb.getCallbackId().equals(efgsCallbackId) && 
-    		  !cb.getUrl().equals(efgsCallbackUrl)) {
-        putCallback(efgsCallbackId, efgsCallbackUrl);
-      } else {
-         deleteCallback(cb.getCallbackId());
+      if (!cb.getCallbackId().equals(efgsCallbackId)) { 
+        deleteCallback(cb.getCallbackId());
       }});
-      if (callbacks.size() == 0) {
-        putCallback(efgsCallbackId, efgsCallbackUrl);
-      }	  
+      putCallback(efgsCallbackId, efgsCallbackUrl);
 	  
   }
   
@@ -232,8 +230,10 @@ public class EfgsSyncer {
 	  } while (exposedKeys.size() > this.efgsMaxUploadKeys);
 	  UTCInstant keyBundleTag = till.roundToBucketStart(releaseBucketDuration);
 
-	  exposedKeys.addAll(fillupKeys(now, exposedKeys));
-	  
+  	  if (fakeKeysEnabled) {
+	    exposedKeys.addAll(fillupKeys(now, exposedKeys));
+  	  }
+  	  
 	  if (exposedKeys.isEmpty()) {
 		  logger.info("No keys to upload");
 		  return;
@@ -293,7 +293,6 @@ public class EfgsSyncer {
 
   private List<GaenKeyInternal> fillupKeys(UTCInstant now, List<GaenKeyInternal> exposedKeys) {
 	var fakeKeys = new ArrayList<GaenKeyInternal>();
-	if (fakeKeysEnabled) {
 	  for (int i = exposedKeys.size(); i < efgsMinUploadKeys; i++) {
 	    byte[] keyData = new byte[fakeKeySize];
 	    random.nextBytes(keyData);
@@ -305,9 +304,9 @@ public class EfgsSyncer {
 	    key.setOrigin(originCountry);
 	    key.setReportType("CONFIRMED_TEST");
 	    key.setDaysSinceOnsetOfSymptoms(14);
+	    key.setCountries(this.otherCountries);
 	    fakeKeys.add(key);
 	  }	      
-    }
 	return fakeKeys;
   }
   
@@ -362,16 +361,16 @@ public class EfgsSyncer {
     logger.info("Received " + receivedKeys.size() + " keys. Store ...");
     long count = 0;
     for (EfgsProto.DiagnosisKey diagKey : receivedKeys) {
+    	
+      if (!this.otherCountries.contains(diagKey.getOrigin())) continue;
+    	
       GaenKeyInternal gaenKey = mapToGaenKey(diagKey);
-      if (diagKey.getOrigin() != null
-          && !diagKey.getOrigin().isBlank()
-          && !diagKey.getVisitedCountriesList().isEmpty()) {
-        gaenDataService.upsertExposee(gaenKey, now);
-        count++;
-        if (count % 1000 == 0) {
-        	logger.info("Stored " + count + " of " + receivedKeys.size() + ".");
-        }
+      gaenDataService.upsertExposee(gaenKey, now);
+      count++;
+      if (count % 1000 == 0) {
+      	logger.info("Stored " + count + " of " + receivedKeys.size() + ".");
       }
+      
     }
   }
 

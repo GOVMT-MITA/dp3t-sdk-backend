@@ -14,13 +14,16 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.security.KeyStore;
 import java.security.PrivateKey;
+import java.security.cert.Certificate;
+import java.security.cert.PKIXParameters;
+import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
-import java.util.TimeZone;
+import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLContext;
 import javax.sql.DataSource;
@@ -38,6 +41,7 @@ import org.apache.http.ssl.SSLContexts;
 import org.dpppt.backend.sdk.data.gaen.GAENDataService;
 import org.dpppt.backend.sdk.data.gaen.JDBCGAENDataServiceImpl;
 import org.dpppt.backend.sdk.interops.batchsigning.SignatureGenerator;
+import org.dpppt.backend.sdk.interops.controller.NotifyMeController;
 import org.dpppt.backend.sdk.interops.syncer.EfgsSyncer;
 import org.dpppt.backend.sdk.interops.syncer.InMemorySyncStateService;
 import org.dpppt.backend.sdk.interops.syncer.SyncStateService;
@@ -57,14 +61,10 @@ import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
-import org.springframework.scheduling.config.CronTask;
 import org.springframework.scheduling.config.IntervalTask;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
-import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -110,7 +110,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 
 	@Value("${ws.interops.efgs.tls.truststore:}")
 	private String tlsTruststore;
-	
+
 	@Value("${ws.interops.efgs.maxage:2}")
 	int efgsMaxAgeDays;
 	
@@ -132,10 +132,10 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	@Value("${ws.app.gaen.key_size:16}")
 	int gaenKeySizeBytes;
 
-	@Value("${ws.interops.efgs.callback.id}")
+	@Value("${ws.interops.efgs.callback.id:}")
 	String efgsCallbackId;
 
-	@Value("${ws.interops.efgs.callback.url}")
+	@Value("${ws.interops.efgs.callback.url:}")
 	String efgsCallbackUrl;
 
 	@Value("${ws.interops.efgs.protobuf.version:1.0}")
@@ -175,6 +175,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 				efgsMinUploadKeys,
 				gaenKeySizeBytes,
 				originCountry, 
+				otherCountries,
 				Duration.ofMillis(releaseBucketDuration), 
 				gaenDataService, 
 				restTemplate, 
@@ -216,7 +217,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 		
 		RestTemplate rt = builder
 				.requestFactory(s1)
-				.messageConverters(hmc, new ByteArrayHttpMessageConverter()) //, new MappingJackson2HttpMessageConverter())
+				.messageConverters(hmc, new ByteArrayHttpMessageConverter(), new MappingJackson2HttpMessageConverter())
 				.build();
 		
 		List<ClientHttpRequestInterceptor> interceptors = rt.getInterceptors();
@@ -226,14 +227,27 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 
 	}
 	
+	private void loadTrustAnchors(KeyStore keyStore) throws Exception {
+	    PKIXParameters params = new PKIXParameters(keyStore);
+
+	    Set<TrustAnchor> trustAnchors = params.getTrustAnchors();
+	    List<Certificate> certificates = trustAnchors.stream()
+	      .map(TrustAnchor::getTrustedCert)
+	      .collect(Collectors.toList());
+
+	    certificates.forEach(c -> {
+	    	System.out.println(c.toString());
+	    });
+	}
+	
 	private HttpClient createHttpClient() {
 		char[] password = tlsKeystorePass.toCharArray();
         final SSLContext sslContext;
         try {
             sslContext = SSLContexts.custom()
                 .loadKeyMaterial(keyStore(tlsKeystore, password), password, (aliases, socket) -> tlsCertAlias)
-                .loadTrustMaterial(null, (x509Certificates, s) -> false)
                 .build();
+            
         } catch (Exception e) {
             throw new IllegalStateException("Error loading key or trust material", e);
         }
@@ -263,7 +277,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
     }
 
 	private KeyStore keyStore(String file, char[] password) throws Exception {
-		KeyStore keyStore = KeyStore.getInstance("PKCS12");
+		KeyStore keyStore = file.endsWith(".jks") ? KeyStore.getInstance("JKS") : KeyStore.getInstance("PKCS12");
 		InputStream in = null;
 		if (file.startsWith("classpath:/")) {
 			in = new ClassPathResource(file.substring(11)).getInputStream();
@@ -284,4 +298,8 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 		return new SignatureGenerator(certificate, privateKey);		
 	}
 	
+	@Bean
+	public NotifyMeController notifyMeController(EfgsSyncer efgsSyncer) {
+		return new NotifyMeController(efgsSyncer);
+	}
 }
