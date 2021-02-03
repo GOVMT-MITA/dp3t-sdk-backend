@@ -1,7 +1,7 @@
 # Dockerfile for STARSDK-WS
 # http://www.ubique.ch/
 
-FROM openjdk:11.0.7-jre-slim
+FROM openjdk:11-jre-slim
 MAINTAINER Malcolm Spiteri <malcolm.spiteri@gov.mt>
 
 ARG targetenv=dev
@@ -30,6 +30,7 @@ ADD ./ws/conf/dpppt-backend-sdk-ws-${targetenv}.properties /home/ws/conf/dpppt-b
 
 # Copy key stores
 COPY ./ws/conf/*.p12 /home/ws/conf/
+COPY ./ws/conf/*.jks /home/ws/conf/
 
 RUN chown -R ws:ws /home/ws
 
