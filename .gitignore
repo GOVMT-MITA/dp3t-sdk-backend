@@ -43,3 +43,4 @@ hs_err_pid*
 # PKI related files
 *.p12
 *.pfx
+*.jks
