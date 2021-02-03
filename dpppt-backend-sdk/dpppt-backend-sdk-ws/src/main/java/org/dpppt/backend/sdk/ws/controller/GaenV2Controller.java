@@ -195,11 +195,11 @@ public class GaenV2Controller {
     }
     var keysSince = UTCInstant.ofEpochMillis(lastKeyBundleTag);
 
-    if (!validationUtils.isValidBatchReleaseTime(keysSince, now)) {
-      return ResponseEntity.notFound().build();
-    }
+    //if (!validationUtils.isValidBatchReleaseTime(keysSince, now)) {
+    //  return ResponseEntity.notFound().build();
+    //}
     UTCInstant keyBundleTag = now.roundToBucketStart(releaseBucketDuration);
-
+	
     // Make sure we're always interested in the origin country
     List<GaenKeyInternal> exposedKeysInternal =
         dataService.getSortedExposedSince(keysSince, now, enforceOriginCountry(countries));
