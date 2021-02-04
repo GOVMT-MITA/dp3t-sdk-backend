@@ -219,6 +219,76 @@ public class GaenV2Controller {
         .header(HEADER_X_KEY_BUNDLE_TAG, Long.toString(keyBundleTag.getTimestamp()))
         .body(payload.getZip());
   }
+  
+  
+  @GetMapping(value = "/exposed/raw")
+  @Documentation(
+      description =
+          "Requests keys published _after_ lastKeyBundleTag. The response includes also"
+              + " international keys if includeAllInternationalKeys is set to true. (default is"
+              + " false)",
+      responses = {
+        "200 => zipped export.bin and export.sig of all keys in that interval",
+        "404 => Invalid _lastKeyBundleTag_"
+      })
+  public @ResponseBody ResponseEntity<List<GaenKeyInternalResponse>> getExposedKeysRaw(
+		  @Documentation(
+	              description =
+	                  "List of countries of interest of requested keys. (iso-3166-1 alpha-2).",
+	              example = "MT")
+	          @RequestParam(required = false)
+	          List<String> countries,
+		  @Documentation(
+              description =
+                  "Only retrieve keys published after the specified key-bundle"
+                      + " tag. Optional, if no tag set, all keys for the"
+                      + " retention period are returned",
+              example = "1593043200000")
+          @RequestParam(required = false)
+          Long lastKeyBundleTag)
+      throws BadBatchReleaseTimeException, InvalidKeyException, SignatureException,
+          NoSuchAlgorithmException, IOException {
+    var now = UTCInstant.now();
+
+    if (lastKeyBundleTag == null) {
+      // if no lastKeyBundleTag given, go back to the start of the retention period and
+      // select next bucket.
+      lastKeyBundleTag =
+          now.minus(retentionPeriod).roundToNextBucket(releaseBucketDuration).getTimestamp();
+    }
+    var keysSince = UTCInstant.ofEpochMillis(lastKeyBundleTag);
+
+    //if (!validationUtils.isValidBatchReleaseTime(keysSince, now)) {
+    //  return ResponseEntity.notFound().build();
+    //}
+    UTCInstant keyBundleTag = now.roundToBucketStart(releaseBucketDuration);
+	
+    // Make sure we're always interested in the origin country
+    List<GaenKeyInternal> exposedKeysInternal =
+        dataService.getSortedExposedSince(keysSince, now, defaultOriginCountry(countries));
+
+    if (exposedKeysInternal.isEmpty()) {
+      return ResponseEntity.noContent()
+          .cacheControl(CacheControl.maxAge(exposedListCacheControl))
+          .header(HEADER_X_KEY_BUNDLE_TAG, Long.toString(keyBundleTag.getTimestamp()))
+          .build();
+    }
+
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.maxAge(exposedListCacheControl))
+        .header(HEADER_X_KEY_BUNDLE_TAG, Long.toString(keyBundleTag.getTimestamp()))
+        .body(exposedKeysInternal.stream()
+        		.map(k -> new GaenKeyInternalResponse(k))
+        		.collect(Collectors.toList())
+        		);
+  }
+  
+  private List<String> defaultOriginCountry(List<String> countries) {
+	if (null == countries || countries.size() == 0) {
+    	countries = List.of(originCountry);
+    }
+	return countries;
+  }
 
   private List<String> enforceOriginCountry(List<String> countries) {
 	if (null == countries || countries.size() == 0) {
@@ -229,7 +299,7 @@ public class GaenV2Controller {
     	}
     }
 	return countries;
-}
+  }
 
   @ExceptionHandler({
     IllegalArgumentException.class,

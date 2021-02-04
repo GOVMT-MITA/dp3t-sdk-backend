@@ -1,12 +1,14 @@
-package org.dpppt.backend.sdk.model.gaen;
+package org.dpppt.backend.sdk.ws.controller;
 
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GaenKeyInternal {
+import org.dpppt.backend.sdk.model.gaen.GaenKeyInternal;
+
+public class GaenKeyInternalResponse {
 	
-	private Long pk;
 	private String keyData;
 	private Integer rollingStartNumber;
 	private Integer rollingPeriod;
@@ -16,31 +18,47 @@ public class GaenKeyInternal {
 	private String origin;
 	private String reportType;
 	private Integer fake = 0;
-	private Instant receivedAt;
-	private Instant expiresAt;
+	private String receivedAt;
+	private String expiresAt;
 	private String efgsBatchTag;
 
-	public Long getPk() {
-		return pk;
+	public String getEfgsBatchTag() {
+		return efgsBatchTag;
 	}
 
-	public void setPk(Long pk) {
-		this.pk = pk;
+	public void setEfgsBatchTag(String efgsBatchTag) {
+		this.efgsBatchTag = efgsBatchTag;
 	}
 
-	public Instant getReceivedAt() {
+	public GaenKeyInternalResponse(GaenKeyInternal gaenKey) {
+		super();
+		this.setKeyData(gaenKey.getKeyData());
+		this.setRollingStartNumber(gaenKey.getRollingStartNumber());
+		this.setRollingPeriod(gaenKey.getRollingPeriod());
+		this.setTransmissionRiskLevel(gaenKey.getTransmissionRiskLevel());
+		this.setCountries(gaenKey.getCountries());
+		this.setDaysSinceOnsetOfSymptoms(gaenKey.getDaysSinceOnsetOfSymptoms());
+		this.setOrigin(gaenKey.getOrigin());
+		this.setReportType(gaenKey.getReportType());
+		this.setFake(gaenKey.getFake());
+		this.setReceivedAt(DateTimeFormatter.ISO_INSTANT.format(gaenKey.getReceivedAt()));
+		this.setExpiresAt(DateTimeFormatter.ISO_INSTANT.format(gaenKey.getExpiresAt()));
+		this.setEfgsBatchTag(gaenKey.getEfgsBatchTag());
+	}
+
+	public String getReceivedAt() {
 		return receivedAt;
 	}
 
-	public void setReceivedAt(Instant receivedAt) {
+	public void setReceivedAt(String receivedAt) {
 		this.receivedAt = receivedAt;
 	}
 
-	public Instant getExpiresAt() {
+	public String getExpiresAt() {
 		return expiresAt;
 	}
 
-	public void setExpiresAt(Instant expiresAt) {
+	public void setExpiresAt(String expiresAt) {
 		this.expiresAt = expiresAt;
 	}
 
@@ -100,30 +118,11 @@ public class GaenKeyInternal {
 		this.daysSinceOnsetOfSymptoms = daysSinceOnsetOfSymptoms;
 	}
 
-	public GaenKeyInternal() {
+	public GaenKeyInternalResponse() {
 		super();
 		countries = new ArrayList<>();
 	}
 	
-	public GaenKeyInternal(GaenKey gaenKey) {
-		super();
-		this.setKeyData(gaenKey.getKeyData());
-		this.setRollingStartNumber(gaenKey.getRollingStartNumber());
-		this.setRollingPeriod(gaenKey.getRollingPeriod());
-		this.setTransmissionRiskLevel(gaenKey.getTransmissionRiskLevel());
-		this.setFake(gaenKey.getFake());
-	}
-	
-	public GaenKey asGaenKey() {
-		GaenKey res = new GaenKey();
-		res.setKeyData(this.getKeyData());
-		res.setRollingStartNumber(this.getRollingStartNumber());
-		res.setRollingPeriod(this.getRollingPeriod());
-		res.setTransmissionRiskLevel(this.getTransmissionRiskLevel());
-		res.setFake(this.getFake());
-		return res;		
-	}
-
 	public List<String> getCountries() {
 		return countries;
 	}
@@ -138,14 +137,6 @@ public class GaenKeyInternal {
 
 	public void setFake(Integer fake) {
 		this.fake = fake;
-	}
-
-	public String getEfgsBatchTag() {
-		return efgsBatchTag;
-	}
-
-	public void setEfgsBatchTag(String efgsBatchTag) {
-		this.efgsBatchTag = efgsBatchTag;
 	}
 	
 	
