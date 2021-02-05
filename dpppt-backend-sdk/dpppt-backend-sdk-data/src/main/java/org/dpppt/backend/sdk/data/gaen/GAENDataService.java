@@ -103,4 +103,15 @@ public interface GAENDataService {
   List<GaenKeyInternal> getSortedExposedSince(
       UTCInstant keysSince, UTCInstant now, String origin);
 
+  /**
+   * Returns all exposed keys since keySince for the given origin countries only.
+   *
+   * @param keysSince
+   * @param now
+   * @param origin Origin of keys to retrieve.
+   * @return
+   */
+  List<GaenKeyInternal> getSortedExposedSinceForOrigins(
+      UTCInstant keysSince, UTCInstant now, List<String> origins);
+
 }

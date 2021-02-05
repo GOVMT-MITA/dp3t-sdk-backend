@@ -57,4 +57,10 @@ public class MockDataSource implements GAENDataService {
 	return this.getSortedExposedSince(keysSince, now, Lists.emptyList());
   }
 
+@Override
+public List<GaenKeyInternal> getSortedExposedSinceForOrigins(UTCInstant keysSince, UTCInstant now,
+		List<String> origins) {
+	return this.getSortedExposedSince(keysSince, now, Lists.emptyList());
+}
+
 }

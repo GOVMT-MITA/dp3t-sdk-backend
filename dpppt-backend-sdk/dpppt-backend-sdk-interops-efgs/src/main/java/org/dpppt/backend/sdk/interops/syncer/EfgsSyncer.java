@@ -223,12 +223,12 @@ public class EfgsSyncer {
 	
 	  List<GaenKeyInternal> exposedKeys = Lists.newArrayList();
 	  int multiplier = 2;
-	  UTCInstant till = now;
+	  UTCInstant till = now.roundToBucketStart(releaseBucketDuration);
 	  do {		  
 		  exposedKeys = gaenDataService.getSortedExposedSince(keysSince, till, originCountry);	
 		  till = now.minus(releaseBucketDuration.multipliedBy(multiplier++));		  
 	  } while (exposedKeys.size() > this.efgsMaxUploadKeys);
-	  UTCInstant keyBundleTag = till.roundToBucketStart(releaseBucketDuration);
+	  UTCInstant keyBundleTag = till;
 
   	  if (fakeKeysEnabled) {
 	    exposedKeys.addAll(fillupKeys(now, exposedKeys));
@@ -274,17 +274,17 @@ public class EfgsSyncer {
                     .headers(createUploadHeaders(keyBundleTag, signature))
                     .body(batch.toByteArray());
             
-            ResponseEntity<String> response =
-            		restTemplate.exchange(request, String.class);
+            ResponseEntity<?> response =
+            		restTemplate.exchange(request, Object.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
             	if (response.getStatusCode().equals(HttpStatus.CREATED)) {
-            		syncStateService.setLastUploadKeyBundleTag(keyBundleTag.getTimestamp());
             		logger.info("Upload successful. BatchTag: " + response.getHeaders().getOrEmpty("batchTag"));
             	}
             	if (response.getStatusCodeValue() == 207) {
             		logger.warn("The upload was only partially successful. Response: " + response.getBody());
             	}
+        		syncStateService.setLastUploadKeyBundleTag(keyBundleTag.getTimestamp());
             } else {
             	logger.error("Upload failed with code " + response.getStatusCodeValue() + " and message " + response.getBody());
             }

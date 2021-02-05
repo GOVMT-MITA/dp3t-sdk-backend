@@ -265,7 +265,7 @@ public class GaenV2Controller {
 	
     // Make sure we're always interested in the origin country
     List<GaenKeyInternal> exposedKeysInternal =
-        dataService.getSortedExposedSince(keysSince, now, defaultOriginCountry(countries));
+        dataService.getSortedExposedSinceForOrigins(keysSince, now, defaultOriginCountry(countries));
 
     if (exposedKeysInternal.isEmpty()) {
       return ResponseEntity.noContent()

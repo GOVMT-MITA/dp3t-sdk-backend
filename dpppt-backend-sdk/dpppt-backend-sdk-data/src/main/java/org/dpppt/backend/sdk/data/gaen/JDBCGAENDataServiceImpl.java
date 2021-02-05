@@ -102,15 +102,29 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     return getKeys(keysSince, now, null, now.roundToBucketStart(releaseBucketDuration), countries, null);
   }
 
+  @Override
+  @Transactional(readOnly = true)
+  public List<GaenKeyInternal> getSortedExposedSinceForOrigins(UTCInstant keysSince, UTCInstant now, List<String> origins) {
+    return getKeys(keysSince, now, null, now.roundToBucketStart(releaseBucketDuration), null, origins);
+  }
+  
   private List<GaenKeyInternal> getKeys(
-      UTCInstant keysSince, UTCInstant now, UTCInstant keyDate, UTCInstant maxBucket, List<String> countries, String origin) {
-    MapSqlParameterSource params = new MapSqlParameterSource();
+      UTCInstant keysSince, UTCInstant now, UTCInstant keyDate, UTCInstant maxBucket, List<String> countries, List<String> origins) {
+
+    if (null != countries && null != origins) {
+	  throw new IllegalArgumentException("Either countries or origin have to be null");
+    }
+    
+	MapSqlParameterSource params = new MapSqlParameterSource();
     params.addValue("since", keysSince.getDate());
     params.addValue("maxBucket", maxBucket.getDate());
     params.addValue("timeSkewSeconds", timeSkew.toSeconds());
     params.addValue("countries", countries);
-    params.addValue("origins", countries);
-    params.addValue("origin", origin);
+    if (origins == null) {
+    	params.addValue("origins", countries);
+    } else { 
+    	params.addValue("origins", origins);
+    }
 
     // Select keys since the given date. We need to make sure, only keys are returned
     // that are allowed to be published.
@@ -145,7 +159,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
             + " where ( (keys.expires_at <= keys.received_at AND keys.received_at >= :since AND keys.received_at < :maxBucket)"
             + " OR (keys.expires_at > keys.received_at AND keys.expires_at >= :since AND keys.expires_at < :maxBucket) )"
             + getSQLExpressionForKeyDateFilter(keyDate, params)
-            + getSQLExpressionForCountriesFilter(countries, origin);
+            + getSQLExpressionForCountriesFilter(countries, origins);
 
     sql += " order by keys.pk_exposed_id desc";
 
@@ -163,15 +177,12 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
         	.collect(Collectors.toList());
 }*/
 
-  private String getSQLExpressionForCountriesFilter(List<String> countries, String origin) {
-	  if (null != countries && null != origin) {
-		  throw new IllegalArgumentException("Either countries or origin have to be null");
-	  }
+  private String getSQLExpressionForCountriesFilter(List<String> countries, List<String> origins) {
 	  if (null != countries) {
 		  return " and (keys.origin in (:origins) OR visited.country in (:countries))";
 	  }
-	  if (null != origin) {
-		  return " and keys.origin = :origin";
+	  if (null != origins) {
+		  return " and keys.origin in (:origins)";
 	  }
 	  return "";
 	  
@@ -259,7 +270,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 
   @Override
   public List<GaenKeyInternal> getSortedExposedSince(UTCInstant keysSince, UTCInstant now, String origin) {
-	  return getKeys(keysSince, now, null, now.roundToBucketStart(releaseBucketDuration), null, origin);
+	  return getKeys(keysSince, now, null, now.roundToBucketStart(releaseBucketDuration), null, List.of(origin));
   }
   
   private void internalUpsertKey(
