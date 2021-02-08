@@ -30,7 +30,7 @@ public class GaenKeyInternalRowMapper implements RowMapper<GaenKeyInternal> {
     gaenKey.setDaysSinceOnsetOfSymptoms(rs.getInt("days_since_onset_of_symptoms"));
     gaenKey.setOrigin(rs.getString("origin"));
     gaenKey.setReportType(rs.getString("report_type"));
-    
+    gaenKey.setTransmissionRiskLevel(rs.getInt("transmission_risk_level"));;    
     gaenKey.setReceivedAt(rs.getTimestamp("received_at").toInstant());
     gaenKey.setExpiresAt(rs.getTimestamp("expires_at").toInstant());
     gaenKey.setEfgsBatchTag(rs.getString("efgs_batch_tag"));

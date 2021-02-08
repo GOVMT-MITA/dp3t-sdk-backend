@@ -142,7 +142,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 
     var sql =
         "select keys.pk_exposed_id, keys.key, keys.rolling_start_number, keys.rolling_period,"
-            + " keys.origin, keys.days_since_onset_of_symptoms, keys.report_type, keys.efgs_batch_tag, keys.efgs_upload_tag, visited.country, keys.received_at, "
+            + " keys.origin, keys.days_since_onset_of_symptoms, keys.report_type, keys.transmission_risk_level, keys.efgs_batch_tag, keys.efgs_upload_tag, visited.country, keys.received_at, "
         	+ " keys.expires_at from t_gaen_exposed as keys "
             + " left join t_visited as visited on keys.pk_exposed_id = visited.pfk_exposed_id"
             + " where ( (keys.expires_at <= keys.received_at AND keys.received_at >= :since AND keys.received_at < :maxBucket)"
@@ -262,8 +262,8 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 	    if (dbType.equals(PGSQL)) {
 	      sqlKey =
 	          "insert into t_gaen_exposed (key, rolling_start_number, rolling_period,"
-	              + " received_at, expires_at, origin, days_since_onset_of_symptoms, report_type, efgs_batch_tag) values (:key, :rolling_start_number,"
-	              + " :rolling_period, :received_at, :expires_at, :origin, :days_since_onset_of_symptoms, :report_type, :efgs_batch_tag) on conflict on"
+	              + " received_at, expires_at, origin, days_since_onset_of_symptoms, report_type, transmission_risk_level, efgs_batch_tag) values (:key, :rolling_start_number,"
+	              + " :rolling_period, :received_at, :expires_at, :origin, :days_since_onset_of_symptoms, :report_type, :transmission_risk_level, :efgs_batch_tag) on conflict on"
 	              + " constraint gaen_exposed_key do nothing";
 	      sqlVisited =
 	          "insert into t_visited (pfk_exposed_id, country) values (:keyId, :country) on conflict on"
@@ -272,13 +272,13 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 	      sqlKey =
 	          "merge into t_gaen_exposed using (values(cast(:key as varchar(24)),"
 	              + " :rolling_start_number, :rolling_period, :received_at, :expires_at, cast(:origin as"
-	              + " varchar(10)), :days_since_onset_of_symptoms, :report_type, :efgs_batch_tag)) as "
+	              + " varchar(10)), :days_since_onset_of_symptoms, :report_type, :transmission_risk_level, :efgs_batch_tag)) as "
 	              + " vals(key, rolling_start_number, rolling_period, received_at, expires_at, "
-	              + " origin, days_since_onset_of_symptoms, report_type, efgs_batch_tag) on t_gaen_exposed.key = vals.key"
+	              + " origin, days_since_onset_of_symptoms, report_type, transmission_risk_level, efgs_batch_tag) on t_gaen_exposed.key = vals.key"
 	              + " when not matched then insert (key, rolling_start_number, rolling_period, received_at, expires_at,"
-	              + " origin, days_since_onset_of_symptoms, report_type, efgs_batch_tag) values (vals.key,"
+	              + " origin, days_since_onset_of_symptoms, report_type, transmission_risk_level, efgs_batch_tag) values (vals.key,"
 	              + " vals.rolling_start_number, vals.rolling_period, vals.received_at, vals.expires_at, vals.origin," 
-	              + " vals.days_since_onset_of_symptoms, vals.report_type, vals.efgs_batch_tag)";
+	              + " vals.days_since_onset_of_symptoms, vals.report_type, vals.transmission_risk_level, vals.efgs_batch_tag)";
 	      sqlVisited =
 	          "merge into t_visited using (values(:keyId, :country)) as vals(keyId, country) on"
 	              + " t_visited.pfk_exposed_id = vals.keyId and t_visited.country = vals.country when"
@@ -297,6 +297,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 	    params.addValue("origin", gaenKey.getOrigin());
 	    params.addValue("days_since_onset_of_symptoms", gaenKey.getDaysSinceOnsetOfSymptoms());
 	    params.addValue("report_type", gaenKey.getReportType());
+	    params.addValue("transmission_risk_level", gaenKey.getTransmissionRiskLevel());
 	    params.addValue("efgs_batch_tag", gaenKey.getEfgsBatchTag());
 	    
 	    KeyHolder keyHolder = new GeneratedKeyHolder();

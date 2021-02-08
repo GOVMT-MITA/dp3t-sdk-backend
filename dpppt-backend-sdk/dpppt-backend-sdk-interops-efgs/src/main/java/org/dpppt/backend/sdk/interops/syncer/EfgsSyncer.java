@@ -252,7 +252,7 @@ public class EfgsSyncer {
 		  	.setKeyData(ByteString.copyFrom(java.util.Base64.getDecoder().decode(ek.getKeyData())))
 		  	.setRollingStartIntervalNumber(ek.getRollingStartNumber())
 		  	.setRollingPeriod(ek.getRollingPeriod())
-		  	.setTransmissionRiskLevel(ek.getDaysSinceOnsetOfSymptoms() <= 7 ? 3 : 2)
+		  	.setTransmissionRiskLevel(ek.getTransmissionRiskLevel())
 		  	.addAllVisitedCountries(ek.getCountries())
 		  	.setOrigin(this.originCountry)
 		  	.setReportType(ReportType.CONFIRMED_TEST)
