@@ -140,20 +140,9 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     // we need to add the time skew to calculate the expiry timestamp of a key:
     // TO_TIMESTAMP((rolling_start_number + rolling_period) * 10 * 60 + :timeSkewSeconds
 
-    String sql =
-            "select keys.pk_exposed_id, keys.key, keys.rolling_start_number, keys.rolling_period,"
-                + " keys.origin, keys.days_since_onset_of_symptoms, keys.report_type, keys.efgs_batch_tag, visited.country, keys.received_at, "
-            	+ " keys.expires_at from t_gaen_exposed as keys "
-                + " left join t_visited as visited on keys.pk_exposed_id = visited.pfk_exposed_id"
-                + getSQLExpressionForKeyDateFilter2(keyDate, params);
-
-        sql += " order by keys.pk_exposed_id desc";
-
-        //List<GaenKeyInternal> tkeys = jt.query(sql, params, new GaenKeyInternalRowMapper());
-        
-    sql =
+    var sql =
         "select keys.pk_exposed_id, keys.key, keys.rolling_start_number, keys.rolling_period,"
-            + " keys.origin, keys.days_since_onset_of_symptoms, keys.report_type, keys.efgs_batch_tag, visited.country, keys.received_at, "
+            + " keys.origin, keys.days_since_onset_of_symptoms, keys.report_type, keys.efgs_batch_tag, keys.efgs_upload_tag, visited.country, keys.received_at, "
         	+ " keys.expires_at from t_gaen_exposed as keys "
             + " left join t_visited as visited on keys.pk_exposed_id = visited.pfk_exposed_id"
             + " where ( (keys.expires_at <= keys.received_at AND keys.received_at >= :since AND keys.received_at < :maxBucket)"
@@ -169,13 +158,6 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
     return aggregateByCountry(keys);
     
   }
-
-/*private List<GaenKeyInternal> filterNotExpired(UTCInstant keysSince, UTCInstant maxBucket, List<GaenKeyInternal> keys) {
-	return keys.stream().filter((k) -> 
-			(k.getExpiry().isBefore(k.getReceivedAt()) || k.getExpiry().equals(k.getReceivedAt())) || 
-			((k.getExpiry().isAfter(keysSince.getInstant()) || k.getExpiry().equals(keysSince.getInstant())) && k.getExpiry().isBefore(maxBucket.getInstant())))
-        	.collect(Collectors.toList());
-}*/
 
   private String getSQLExpressionForCountriesFilter(List<String> countries, List<String> origins) {
 	  if (null != countries) {
@@ -339,4 +321,25 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 	          sqlVisited, visitedBatch.toArray(new MapSqlParameterSource[visitedBatch.size()]));
 	    }
 	  }
+
+
+		public void markUploaded(List<GaenKeyInternal> gaenKeys, String batchTag) {
+
+			String sql = "update t_gaen_exposed set efgs_upload_tag = :efgs_upload_tag"
+					+ " where pk_exposed_id = :pk_exposed_id";
+
+			List<MapSqlParameterSource> uploadBatch = new ArrayList<>();
+
+			for (GaenKeyInternal gaenKey : gaenKeys) {
+				MapSqlParameterSource params = new MapSqlParameterSource();
+				params.addValue("pk_exposed_id", gaenKey.getPk());
+				params.addValue("efgs_upload_tag", batchTag);
+				uploadBatch.add(params);
+			}
+
+			if (!uploadBatch.isEmpty()) {
+				jt.batchUpdate(sql, uploadBatch.toArray(new MapSqlParameterSource[uploadBatch.size()]));
+			}
+		}
+  
 }

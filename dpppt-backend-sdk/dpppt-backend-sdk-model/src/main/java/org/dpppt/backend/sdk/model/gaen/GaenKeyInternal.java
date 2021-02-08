@@ -19,6 +19,15 @@ public class GaenKeyInternal {
 	private Instant receivedAt;
 	private Instant expiresAt;
 	private String efgsBatchTag;
+	private String efgsUploadTag;
+
+	public String getEfgsUploadTag() {
+		return efgsUploadTag;
+	}
+
+	public void setEfgsUploadTag(String efgsUploadTag) {
+		this.efgsUploadTag = efgsUploadTag;
+	}
 
 	public Long getPk() {
 		return pk;

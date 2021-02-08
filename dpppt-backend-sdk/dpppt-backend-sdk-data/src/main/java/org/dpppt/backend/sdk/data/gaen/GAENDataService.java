@@ -113,5 +113,15 @@ public interface GAENDataService {
    */
   List<GaenKeyInternal> getSortedExposedSinceForOrigins(
       UTCInstant keysSince, UTCInstant now, List<String> origins);
+  
+  
+  /**
+   * Marks the given exposed keys as uploaded by setting their upload batch tag.
+   *
+   * @param gaenKeys Exposed keys to mark
+   * @param batchTag Upload batch tag
+   * @return
+   */
+  void markUploaded(List<GaenKeyInternal> gaenKeys, String batchTag);
 
 }

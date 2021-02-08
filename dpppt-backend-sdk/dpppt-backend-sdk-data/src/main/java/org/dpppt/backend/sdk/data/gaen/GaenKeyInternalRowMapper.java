@@ -34,6 +34,7 @@ public class GaenKeyInternalRowMapper implements RowMapper<GaenKeyInternal> {
     gaenKey.setReceivedAt(rs.getTimestamp("received_at").toInstant());
     gaenKey.setExpiresAt(rs.getTimestamp("expires_at").toInstant());
     gaenKey.setEfgsBatchTag(rs.getString("efgs_batch_tag"));
+    gaenKey.setEfgsUploadTag(rs.getString("efgs_upload_tag"));
    	
     return gaenKey;
   }

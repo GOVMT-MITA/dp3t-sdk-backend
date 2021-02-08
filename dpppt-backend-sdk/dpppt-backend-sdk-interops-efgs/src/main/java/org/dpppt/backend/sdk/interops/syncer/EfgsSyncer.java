@@ -225,29 +225,34 @@ public class EfgsSyncer {
 	  int multiplier = 2;
 	  UTCInstant till = now.roundToBucketStart(releaseBucketDuration);
 	  do {		  
-		  exposedKeys = gaenDataService.getSortedExposedSince(keysSince, till, originCountry);	
+		  exposedKeys = gaenDataService.getSortedExposedSince(keysSince, till, originCountry).stream()
+				  			.filter(k -> Strings.isNullOrEmpty(k.getEfgsUploadTag()))
+				  			.collect(Collectors.toList());
+		  
 		  till = now.minus(releaseBucketDuration.multipliedBy(multiplier++));		  
 	  } while (exposedKeys.size() > this.efgsMaxUploadKeys);
 	  UTCInstant keyBundleTag = till;
 
-  	  if (fakeKeysEnabled) {
-	    exposedKeys.addAll(fillupKeys(now, exposedKeys));
-  	  }
-  	  
 	  if (exposedKeys.isEmpty()) {
 		  logger.info("No keys to upload");
 		  return;
 	  } else {
 		  logger.info("Uploading " + exposedKeys.size() + " keys.");
 	  }
+
+	  List<GaenKeyInternal> finalKeys = Lists.newArrayList();
+	  finalKeys.addAll(exposedKeys);
+  	  if (fakeKeysEnabled) {
+  		finalKeys.addAll(fillupKeys(now, finalKeys));
+  	  }
 	  
-	  List<EfgsProto.DiagnosisKey> diagnosisKeys = exposedKeys.stream().map(ek -> {
+	  List<EfgsProto.DiagnosisKey> diagnosisKeys = finalKeys.stream().map(ek -> {
 		  
 		  return EfgsProto.DiagnosisKey.newBuilder()
 		  	.setKeyData(ByteString.copyFrom(java.util.Base64.getDecoder().decode(ek.getKeyData())))
 		  	.setRollingStartIntervalNumber(ek.getRollingStartNumber())
 		  	.setRollingPeriod(ek.getRollingPeriod())
-		  	.setTransmissionRiskLevel(ek.getTransmissionRiskLevel())
+		  	.setTransmissionRiskLevel(ek.getDaysSinceOnsetOfSymptoms() <= 7 ? 3 : 2)
 		  	.addAllVisitedCountries(ek.getCountries())
 		  	.setOrigin(this.originCountry)
 		  	.setReportType(ReportType.CONFIRMED_TEST)
@@ -280,6 +285,7 @@ public class EfgsSyncer {
             if (response.getStatusCode().is2xxSuccessful()) {
             	if (response.getStatusCode().equals(HttpStatus.CREATED)) {
             		logger.info("Upload successful. BatchTag: " + response.getHeaders().getOrEmpty("batchTag"));
+            		gaenDataService.markUploaded(exposedKeys, String.valueOf(keyBundleTag.get10MinutesSince1970()));
             	}
             	if (response.getStatusCodeValue() == 207) {
             		logger.warn("The upload was only partially successful. Response: " + response.getBody());
