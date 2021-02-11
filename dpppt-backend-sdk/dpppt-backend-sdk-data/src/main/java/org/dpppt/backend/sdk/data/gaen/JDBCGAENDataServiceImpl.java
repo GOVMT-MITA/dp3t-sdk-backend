@@ -65,7 +65,8 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
   @Transactional(readOnly = false)
   public void upsertExposee(
       GaenKeyInternal gaenKey, UTCInstant now) {
-    internalUpsertKey(gaenKey, now);
+	var receivedAt = now.roundToNextBucket(releaseBucketDuration).minus(Duration.ofMillis(1));
+    internalUpsertKey(gaenKey, receivedAt);
   }
 
   @Override
@@ -341,6 +342,15 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 			if (!uploadBatch.isEmpty()) {
 				jt.batchUpdate(sql, uploadBatch.toArray(new MapSqlParameterSource[uploadBatch.size()]));
 			}
+		}
+		
+		public boolean efgsBatchExists(String batchTag) {
+			String sql = "select count(*) from t_gaen_exposed where efgs_batch_tag = :efgs_batch_tag";
+			
+			MapSqlParameterSource params = new MapSqlParameterSource();
+			params.addValue("efgs_batch_tag", batchTag);
+			
+			return jt.queryForObject(sql, params, Long.class) > 0;
 		}
   
 }

@@ -124,4 +124,12 @@ public interface GAENDataService {
    */
   void markUploaded(List<GaenKeyInternal> gaenKeys, String batchTag);
 
+  /**
+   * Returns true if the given batch tag exists, otherwise return false
+   *
+   * @param batchTag batch tag
+   * @return
+   */
+  boolean efgsBatchExists(String batchTag);
+  
 }

@@ -4,9 +4,9 @@ import java.time.LocalDate;
 
 public interface SyncStateService {
 
-	String getLastDownloadedBatchTag(LocalDate dayDate);
+	Integer getNextDownloadBatchNum(LocalDate dayDate);
 
-	void setLastDownloadedBatchTag(LocalDate dayDate, String batchTag);
+	void setNextDownloadBatchNum(LocalDate dayDate, Integer batchNum);
 
 	Long getLastUploadKeyBundleTag();
 	

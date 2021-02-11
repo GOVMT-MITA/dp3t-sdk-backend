@@ -6,20 +6,12 @@ import java.util.Map;
 
 public class InMemorySyncStateService implements SyncStateService {
 
-	private Map<LocalDate, String> lastDownloadedBatchTagMap;
+	private Map<LocalDate, Integer> nextDownloadBatchNumsMap;
 	private Long lastUploadKeyBundleTag = null;
 
 	public InMemorySyncStateService() {
 		super();
-		lastDownloadedBatchTagMap = new HashMap<>();
-	}
-
-	public String getLastDownloadedBatchTag(LocalDate dayDate) {
-		return lastDownloadedBatchTagMap.get(dayDate);
-	}
-
-	public void setLastDownloadedBatchTag(LocalDate dayDate, String batchTag) {
-		this.lastDownloadedBatchTagMap.put(dayDate, batchTag);
+		nextDownloadBatchNumsMap = new HashMap<>();
 	}
 
 	public Long getLastUploadKeyBundleTag() {
@@ -28,6 +20,16 @@ public class InMemorySyncStateService implements SyncStateService {
 
 	public void setLastUploadKeyBundleTag(Long lastUploadKeyBundleTag) {
 		this.lastUploadKeyBundleTag = lastUploadKeyBundleTag;
+	}
+
+	@Override
+	public Integer getNextDownloadBatchNum(LocalDate dayDate) {
+		return nextDownloadBatchNumsMap.get(dayDate);
+	}
+
+	@Override
+	public void setNextDownloadBatchNum(LocalDate dayDate, Integer batchNum) {
+		this.nextDownloadBatchNumsMap.put(dayDate, batchNum);		
 	}
 
 }
