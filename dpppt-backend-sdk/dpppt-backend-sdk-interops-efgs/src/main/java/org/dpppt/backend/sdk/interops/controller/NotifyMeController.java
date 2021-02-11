@@ -24,10 +24,10 @@ public class NotifyMeController {
 	private final ExecutorService executor;
 	private static final Logger logger = LoggerFactory.getLogger(NotifyMeController.class);
 
-	public NotifyMeController(EfgsSyncer efgsSyncer) {
+	public NotifyMeController(EfgsSyncer efgsSyncer, ExecutorService executor) {
 		super();
 		this.efgsSyncer = efgsSyncer;
-		executor = Executors.newSingleThreadExecutor();
+		this.executor = executor;
 	}
 	
 	@GetMapping(value = "/notify_me")

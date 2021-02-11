@@ -22,6 +22,8 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -190,12 +192,15 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	@Autowired
 	@Lazy
 	EfgsSyncer efgsSyncer;
+	
+	@Autowired
+	ExecutorService executorService;
 
     
 	@Override
 	public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
 		taskRegistrar.addFixedRateTask(new IntervalTask(() -> {
-			efgsSyncer.sync();
+			executorService.submit(efgsSyncer.startSync());
 		}, releaseBucketDuration));
 
 	}
@@ -299,7 +304,12 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
 	}
 	
 	@Bean
-	public NotifyMeController notifyMeController(EfgsSyncer efgsSyncer) {
-		return new NotifyMeController(efgsSyncer);
+	public ExecutorService executorService() {
+		return Executors.newSingleThreadExecutor();
+	};
+
+	@Bean
+	public NotifyMeController notifyMeController(EfgsSyncer efgsSyncer, ExecutorService executorService) {
+		return new NotifyMeController(efgsSyncer, executorService);
 	}
 }
