@@ -344,13 +344,13 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 			}
 		}
 		
-		public boolean efgsBatchExists(String batchTag) {
+		public long efgsBatchExists(String batchTag) {
 			String sql = "select count(*) from t_gaen_exposed where efgs_batch_tag = :efgs_batch_tag";
 			
 			MapSqlParameterSource params = new MapSqlParameterSource();
 			params.addValue("efgs_batch_tag", batchTag);
 			
-			return jt.queryForObject(sql, params, Long.class) > 0;
+			return jt.queryForObject(sql, params, Long.class);
 		}
   
 }

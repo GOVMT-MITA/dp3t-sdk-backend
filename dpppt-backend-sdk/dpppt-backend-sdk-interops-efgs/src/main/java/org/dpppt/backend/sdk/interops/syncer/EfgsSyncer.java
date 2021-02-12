@@ -375,16 +375,17 @@ public class EfgsSyncer {
   }
 
   @Transactional(readOnly = false)
-  private void saveDiagnosisKeys(Map<String, List<EfgsProto.DiagnosisKey>> receivedKeys, long keysCount) {
+  private long saveDiagnosisKeys(Map<String, List<EfgsProto.DiagnosisKey>> receivedKeys, long keysCount) {
 	UTCInstant now = UTCInstant.now();
 	
     logger.info("Received " + keysCount + " keys. Store ...");
     long storedCount = 0;
     for (Map.Entry<String, List<EfgsProto.DiagnosisKey>> diagKeys : receivedKeys.entrySet()) {
-      if (gaenDataService.efgsBatchExists(diagKeys.getKey())) {
+      /*long existKeyCount = gaenDataService.efgsBatchExists(diagKeys.getKey());
+      if (existKeyCount > 0 && existKeyCount == diagKeys.getValue().size()) {
     	  logger.warn("Batch " + diagKeys.getKey() + " has already been downloaded before. Not storing.");
     	  continue;
-      }
+      }*/
       for (EfgsProto.DiagnosisKey diagKey : diagKeys.getValue()) {
           
     	  if (!this.otherCountries.contains(diagKey.getOrigin())) continue;
@@ -398,6 +399,7 @@ public class EfgsSyncer {
           }    	  
       }      
     }
+    return storedCount;
   }
 
   @AllArgsConstructor
@@ -418,6 +420,7 @@ public class EfgsSyncer {
       boolean done = false;
 
   	  String currentBatchTagForDay = startBatchTag; 
+  	  int nextBatchNum = 0;
   	  long keysCount = 0;
       while (!done) {
         UriComponentsBuilder builder =
@@ -440,7 +443,8 @@ public class EfgsSyncer {
         } catch (HttpClientErrorException e) {
         	if (e.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
         		done = true;
-        		logger.info(e.getResponseBodyAsString());
+        		logger.warn(e.getResponseBodyAsString());
+        		nextBatchNum = getBatchNumber(startBatchTag);
         		continue;
         	} else {
         		throw e;
@@ -461,13 +465,20 @@ public class EfgsSyncer {
             	logger.warn("Got a null body");
             } else {
                 logger.info(" Number of keys: "
-                        + downloadResponse.getKeysCount());            	
-                receivedKeys.put(batchTag, downloadResponse.getKeysList());
-            	keysCount += downloadResponse.getKeysCount();
+                        + downloadResponse.getKeysCount());  
+
+                long existKeyCount = gaenDataService.efgsBatchExists(batchTag);
+                if (existKeyCount == 0 || existKeyCount != downloadResponse.getKeysCount()) {
+                  receivedKeys.put(batchTag, downloadResponse.getKeysList());
+              	  keysCount += downloadResponse.getKeysCount();
+                } else {
+               	  logger.warn("Batch " + batchTag + " has already been downloaded before. Discarding.");                	
+                }
             }            
             
             if ("null".equals(nextBatchTag)) {
-                logger.info("Got empty nextBatchTag. Store next batch tag as " + (getBatchNumber(batchTag) + 1));
+            	nextBatchNum = getBatchNumber(batchTag) + 1;
+                logger.info("Got empty nextBatchTag. Store next batch tag as " + nextBatchNum);
                 // no more keys to load. store last batch tag for next sync
             	done = true;
             	currentBatchTagForDay = batchTag;
@@ -476,17 +487,16 @@ public class EfgsSyncer {
             if ((runningKeyCount + keysCount) >= efgsMaxDownloadKeys) {
                 logger.info("Exceeded efgsMaxDownloadKeys. Stopping download and storing next batch tag as " + (getBatchNumber(batchTag) + 1));
 
-                // no more keys to load. store last batch tag for next sync
+                // no more keys to load. 
             	done = true;
-            	currentBatchTagForDay = batchTag;
-            	continue;
             }
             currentBatchTagForDay = nextBatchTag;            	
+        	nextBatchNum = getBatchNumber(nextBatchTag);
             
           }
         }
       }
-	return new DownloadResult(receivedKeys, getBatchNumber(currentBatchTagForDay) + 1, keysCount);
+	return new DownloadResult(receivedKeys, nextBatchNum, keysCount);
   }
   
   private int getBatchNumber(String batchTag) {

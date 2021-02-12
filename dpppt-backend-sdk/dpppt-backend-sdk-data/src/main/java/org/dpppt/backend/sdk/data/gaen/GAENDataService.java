@@ -130,6 +130,6 @@ public interface GAENDataService {
    * @param batchTag batch tag
    * @return
    */
-  boolean efgsBatchExists(String batchTag);
+  long efgsBatchExists(String batchTag);
   
 }
