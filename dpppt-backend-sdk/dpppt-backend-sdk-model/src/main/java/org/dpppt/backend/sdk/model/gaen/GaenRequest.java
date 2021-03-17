@@ -35,6 +35,12 @@ public class GaenRequest {
               + " and handle keys with RollingPeriod < 144 (e.g. only valid until submission).")
   private Integer delayedKeyDate;
 
+  @Valid
+  @Documentation(
+      description =
+          "List of countries of interest.")
+  List<String> countries;
+
   public List<GaenKey> getGaenKeys() {
     return this.gaenKeys;
   }
@@ -50,4 +56,14 @@ public class GaenRequest {
   public void setDelayedKeyDate(Integer delayedKeyDate) {
     this.delayedKeyDate = delayedKeyDate;
   }
+
+  public List<String> getCountries() {
+	return countries;
+  }
+
+  public void setCountries(List<String> countries) {
+	this.countries = countries;
+  }
+  
+  
 }

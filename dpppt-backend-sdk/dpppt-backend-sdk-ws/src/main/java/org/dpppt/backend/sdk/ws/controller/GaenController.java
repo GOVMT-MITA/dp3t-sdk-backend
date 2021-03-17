@@ -178,7 +178,7 @@ public class GaenController {
     // Filter out non valid keys and insert them into the database (c.f. InsertManager and
     // configured Filters in the WSBaseConfig)
     insertManagerExposed.insertIntoDatabase(
-        gaenRequest.getGaenKeys(), userAgent, principal, now, null);
+        gaenRequest.getGaenKeys(), userAgent, principal, now, gaenRequest.getCountries());
 
     this.validationUtils.assertDelayedKeyDate(
         now, UTCInstant.of(gaenRequest.getDelayedKeyDate(), GaenUnit.TenMinutes));
