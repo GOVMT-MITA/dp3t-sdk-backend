@@ -7,6 +7,8 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.time.Duration;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -70,6 +72,7 @@ public class GaenV2Controller {
   private final Duration exposedListCacheControl;
   private final Duration retentionPeriod;
   private final String originCountry;
+  private final boolean interopEnabled;
   
   private static final String HEADER_X_KEY_BUNDLE_TAG = "x-key-bundle-tag";
 
@@ -84,7 +87,8 @@ public class GaenV2Controller {
       Duration requestTime,
       Duration exposedListCacheControl,
       Duration retentionPeriod,
-      String originCountry) {
+      String originCountry,
+      boolean interopEnabled) {
     this.insertManager = insertManager;
     this.validateRequest = validateRequest;
     this.validationUtils = validationUtils;
@@ -96,6 +100,7 @@ public class GaenV2Controller {
     this.exposedListCacheControl = exposedListCacheControl;
     this.retentionPeriod = retentionPeriod;
     this.originCountry = originCountry;
+    this.interopEnabled = interopEnabled;
   }
 
   @GetMapping(value = "")
@@ -199,13 +204,21 @@ public class GaenV2Controller {
     //  return ResponseEntity.notFound().build();
     //}
     UTCInstant keyBundleTag = now.roundToBucketStart(releaseBucketDuration);
-	
+    
     // Make sure we're always interested in the origin country
-    List<GaenKeyInternal> exposedKeysInternal =
-        dataService.getSortedExposedSince(keysSince, now, enforceOriginCountry(countries));
+    var effectiveCountries = enforceOriginCountry(countries);
+    
+    // When the user only requests the origin country, we return only keys with origin = origin country. Otherwise, we return
+    // keys with origin IN given list of countries OR visited country IN given list of countries
+    
+    List<GaenKeyInternal> exposedKeysInternal = (effectiveCountries.size() == 1 && effectiveCountries.get(0).equals(originCountry)) ?
+    		dataService.getSortedExposedSinceForOrigins(keysSince, now, effectiveCountries) :
+    		dataService.getSortedExposedSince(keysSince, now, effectiveCountries);
 
     var exposedKeys = exposedKeysInternal.stream().map(ek -> ek.asGaenKey()).collect(Collectors.toList());
     
+    logRequest();
+        
     if (exposedKeys.isEmpty()) {
       return ResponseEntity.noContent()
           .cacheControl(CacheControl.maxAge(exposedListCacheControl))
@@ -219,6 +232,16 @@ public class GaenV2Controller {
         .header(HEADER_X_KEY_BUNDLE_TAG, Long.toString(keyBundleTag.getTimestamp()))
         .body(payload.getZip());
   }
+
+private void logRequest() {
+	StringBuilder sb = new StringBuilder();
+    sb.append("User requested keys from ");
+    sb.append(DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneId.of("UTC")).format(keysSince.getInstant()));
+    sb.append(" for countries ");
+    effectiveCountries.forEach(c -> sb.append(c + ", "));
+    sb.append("Returning " + exposedKeys.size() + " keys.");
+    logger.info(sb.toString());
+}
   
   
   @GetMapping(value = "/exposed/raw")
@@ -294,6 +317,7 @@ public class GaenV2Controller {
 	if (null == countries || countries.size() == 0) {
     	countries = List.of(originCountry);
     } else {
+    	countries = countries.stream().map(c -> c.toUpperCase()).collect(Collectors.toList());
     	if (!countries.contains(originCountry)) {
     		countries.add(originCountry);
     	}

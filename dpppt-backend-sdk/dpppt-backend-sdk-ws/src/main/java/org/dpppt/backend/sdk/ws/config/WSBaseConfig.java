@@ -344,7 +344,8 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
         Duration.ofMillis(requestTime),
         Duration.ofMillis(exposedListCacheControl),
         Duration.ofDays(retentionDays),
-        originCountry);
+        originCountry,
+        interopEnabled);
   }
 
   @Bean
