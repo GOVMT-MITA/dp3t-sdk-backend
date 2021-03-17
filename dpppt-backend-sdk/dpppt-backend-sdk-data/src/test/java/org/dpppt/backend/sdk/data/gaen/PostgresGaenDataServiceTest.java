@@ -230,13 +230,14 @@ public class PostgresGaenDataServiceTest {
       Instant receivedAt, Instant keyDate, String key) throws SQLException {
     Connection connection = dataSource.getConnection();
     String sql =
-        "into t_gaen_exposed (pk_exposed_id, key, received_at, rolling_start_number,"
-            + " rolling_period, origin) values (100, ?, ?, ?, 144, 'CH')";
+        "into t_gaen_exposed (pk_exposed_id, key, received_at, expires_at, rolling_start_number,"
+            + " rolling_period, origin) values (100, ?, ?, ?, ?, 144, 'CH')";
     PreparedStatement preparedStatement = connection.prepareStatement("insert " + sql);
     preparedStatement.setString(1, key);
     preparedStatement.setTimestamp(2, new Timestamp(receivedAt.toEpochMilli()));
+    preparedStatement.setTimestamp(3, new Timestamp(receivedAt.toEpochMilli()));
     preparedStatement.setInt(
-        3, (int) GaenUnit.TenMinutes.between(Instant.ofEpochMilli(0), keyDate));
+        4, (int) GaenUnit.TenMinutes.between(Instant.ofEpochMilli(0), keyDate));
     preparedStatement.executeUpdate();
     
   }
