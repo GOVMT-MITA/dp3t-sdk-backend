@@ -64,6 +64,21 @@ public interface GAENDataService {
       UTCInstant keyDate, UTCInstant publishedAfter, UTCInstant publishedUntil, UTCInstant now, boolean international);
 
   /**
+   * Returns all exposeed keys for the given batch, where a batch is parametrized with keyDate (for
+   * which day was the key used) publishedAfter/publishedUntil (when was the key published) and now
+   * (has the key expired or not, based on rollingStartNumber and rollingPeriod).
+   *
+   * @param keyDate must be midnight UTC
+   * @param publishedAfter when publication should start
+   * @param publishedUntil last publication
+   * @param now the start of the query
+   * @param international return keys from all countries of origin
+   * @return all exposeed keys for the given batch
+   */
+  List<GaenKeyInternal> getSortedExposedForKeyDateForOrigins(
+      UTCInstant keyDate, UTCInstant publishedAfter, UTCInstant publishedUntil, UTCInstant now, boolean international);
+
+  /**
    * deletes entries older than retentionperiod
    *
    * @param retentionPeriod in milliseconds

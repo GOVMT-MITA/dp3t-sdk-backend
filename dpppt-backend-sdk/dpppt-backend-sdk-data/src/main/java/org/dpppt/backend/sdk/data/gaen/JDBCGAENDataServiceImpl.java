@@ -99,6 +99,13 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
 
   @Override
   @Transactional(readOnly = true)
+  public List<GaenKeyInternal> getSortedExposedForKeyDateForOrigins(
+    UTCInstant keyDate, UTCInstant publishedAfter, UTCInstant publishedUntil, UTCInstant now, boolean international) {
+    return getKeys(publishedAfter, now, keyDate, publishedUntil, null, countriesOfInterest(international));
+  }
+  
+  @Override
+  @Transactional(readOnly = true)
   public List<GaenKeyInternal> getSortedExposedSince(UTCInstant keysSince, UTCInstant now, List<String> countries) {
     return getKeys(keysSince, now, null, now.roundToBucketStart(releaseBucketDuration), countries, null);
   }
@@ -152,6 +159,7 @@ public class JDBCGAENDataServiceImpl implements GAENDataService {
             + getSQLExpressionForCountriesFilter(countries, origins);
 
     sql += " order by keys.pk_exposed_id desc";
+    sql += " limit 100000";
 
     
     List<GaenKeyInternal> keys = jt.query(sql, params, new GaenKeyInternalRowMapper());

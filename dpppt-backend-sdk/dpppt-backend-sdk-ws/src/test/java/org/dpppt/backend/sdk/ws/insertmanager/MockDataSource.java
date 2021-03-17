@@ -63,4 +63,23 @@ public List<GaenKeyInternal> getSortedExposedSinceForOrigins(UTCInstant keysSinc
 	return this.getSortedExposedSince(keysSince, now, Lists.emptyList());
 }
 
+@Override
+public void markUploaded(List<GaenKeyInternal> gaenKeys, String batchTag) {
+	// TODO Auto-generated method stub
+	
+}
+
+@Override
+public long efgsBatchExists(String batchTag) {
+	// TODO Auto-generated method stub
+	return 0;
+}
+
+@Override
+public List<GaenKeyInternal> getSortedExposedForKeyDateForOrigins(UTCInstant keyDate, UTCInstant publishedAfter,
+		UTCInstant publishedUntil, UTCInstant now, boolean international) {
+	// TODO Auto-generated method stub
+	return null;
+}
+
 }
