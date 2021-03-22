@@ -7,6 +7,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -217,7 +218,8 @@ public class GaenV2Controller {
 
     var exposedKeys = exposedKeysInternal.stream().map(ek -> ek.asGaenKey()).collect(Collectors.toList());
     
-    logRequest();
+    // Log the download request
+	logDownloadRequest(keysSince.getInstant(), effectiveCountries, exposedKeys.size());
         
     if (exposedKeys.isEmpty()) {
       return ResponseEntity.noContent()
@@ -233,16 +235,16 @@ public class GaenV2Controller {
         .body(payload.getZip());
   }
 
-private void logRequest() {
+private void logDownloadRequest(Instant keysSince, List<String> effectiveCountries, int numKeys) {
 	StringBuilder sb = new StringBuilder();
     sb.append("User requested keys from ");
-    sb.append(DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneId.of("UTC")).format(keysSince.getInstant()));
+    sb.append(DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneId.of("UTC")).format(keysSince));
     sb.append(" for countries ");
     effectiveCountries.forEach(c -> sb.append(c + ", "));
-    sb.append("Returning " + exposedKeys.size() + " keys.");
+    sb.append("Returning " + numKeys + " keys.");
     logger.info(sb.toString());
 }
-  
+
   
   @GetMapping(value = "/exposed/raw")
   @Documentation(
