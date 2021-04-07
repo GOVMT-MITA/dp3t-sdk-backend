@@ -219,6 +219,7 @@ public class EfgsSyncer {
 	  do {		  
 		  exposedKeys = gaenDataService.getSortedExposedSince(keysSince, till, originCountry).stream()
 				  			.filter(k -> Strings.isNullOrEmpty(k.getEfgsUploadTag()))
+				  			.filter(k -> !(k.getCountries().size() == 0 || (k.getCountries().size() == 1 && k.getCountries().get(0).equals(originCountry))))
 				  			.collect(Collectors.toList());
 		  
 		  till = now.minus(releaseBucketDuration.multipliedBy(multiplier++));		  
