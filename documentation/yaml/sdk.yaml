@@ -1,11 +1,11 @@
 openapi: 3.0.0
 servers:
-- url: https://demo.dpppt.org
+- url: https://data-test.ws.covidalert.gov.mt
   description: ''
 info:
   version: 1.0-gapple
-  description: DP3T API
-  title: DP3T API
+  description: COVIDAlert Malta API
+  title: COVIDAlert Malta API
 paths:
   /v1/gaen/:
     get:
@@ -204,7 +204,46 @@ paths:
       parameters:
       - name: countries
         in: query
-        description: List of origin countries of requested keys. (iso-3166-1 alpha-2).
+        description: List of countries of interest of requested keys. (iso-3166-1
+          alpha-2).
+        example: MT
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: lastKeyBundleTag
+        in: query
+        description: Only retrieve keys published after the specified key-bundle tag.
+          Optional, if no tag set, all keys for the retention period are returned
+        example: '1593043200000'
+        required: false
+        schema:
+          type: integer
+          format: long
+  /v2/gaen/exposed/raw:
+    get:
+      summary: getExposedKeysRaw
+      description: Requests keys published _after_ lastKeyBundleTag. The response
+        includes also international keys if includeAllInternationalKeys is set to
+        true. (default is false)
+      responses:
+        '200':
+          description: List of all keys in that interval for the given countries of
+            interest
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/org.dpppt.backend.sdk.ws.controller.GaenKeyInternalResponse'
+        '404':
+          description: Invalid _lastKeyBundleTag_
+      parameters:
+      - name: countries
+        in: query
+        description: List of countries of interest of requested keys. (iso-3166-1
+          alpha-2).
         example: MT
         required: false
         schema:
@@ -285,7 +324,6 @@ components:
           description: Between 14 and 30 Temporary Exposure Keys - zero or more of
             them might be fake keys. Starting with EN 1.5 it is possible that clients
             send more than 14 keys.
-          example: ''
         delayedKeyDate:
           type: integer
           description: Prior to version 1.5 Exposure Keys for the day of report weren't
@@ -297,6 +335,11 @@ components:
             not be necessary after the Exposure Framework is able to send and handle
             keys with RollingPeriod < 144 (e.g. only valid until submission).
           example: ''
+        countries:
+          type: array
+          items:
+            type: string
+          description: List of countries of interest.
     org.dpppt.backend.sdk.model.gaen.GaenSecondDay:
       type: object
       required:

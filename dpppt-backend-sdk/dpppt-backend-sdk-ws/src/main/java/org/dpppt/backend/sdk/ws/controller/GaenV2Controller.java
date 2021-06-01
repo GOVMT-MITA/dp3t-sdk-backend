@@ -253,7 +253,7 @@ private void logDownloadRequest(Instant keysSince, List<String> effectiveCountri
               + " international keys if includeAllInternationalKeys is set to true. (default is"
               + " false)",
       responses = {
-        "200 => zipped export.bin and export.sig of all keys in that interval",
+        "200 => List of all keys in that interval for the given countries of interest",
         "404 => Invalid _lastKeyBundleTag_"
       })
   public @ResponseBody ResponseEntity<List<GaenKeyInternalResponse>> getExposedKeysRaw(

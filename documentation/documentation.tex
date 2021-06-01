@@ -39,7 +39,7 @@
 	 
 \par}
 	\vspace{3cm}
-	{\Huge DP3T API \par}
+	{\Huge COVIDAlert Malta API \par}
 	\vspace{1.5cm}
 	{\huge Documentation \par}
 	\vspace{3cm}
@@ -52,7 +52,7 @@
 \include{introduction}
 \part{Web Service}
 \subsection{Introduction}
-A test implementation is hosted on: https://demo.dpppt.org. 
+A test implementation is hosted on: https://data-test.ws.covidalert.gov.mt. 
 
 This part of the documentation deals with the different API-Endpoints. Examples to fields are put into the models section~\ref{sec:Models} to increase readability. Every request lists all possible status codes and the reason for the status code.
 \section{ /v1/gaen/ }
@@ -286,7 +286,7 @@ Requests keys published \emph{after} lastKeyBundleTag. The response includes als
 \begin{ubparam}{\textwidth}{|H|c|Y|}
 \ubheader{Field} & \ubheader{Type} & \ubheader{Description}\\
 \hline
-\ubheader{ countries }   &  string[]  & List of origin countries of requested keys. (iso-3166-1 alpha-2).
+\ubheader{ countries }   &  string[]  & List of countries of interest of requested keys. (iso-3166-1 alpha-2).
  \\
 \hline
 \ubheader{ lastKeyBundleTag }   &  integer  & Only retrieve keys published after the specified key-bundle tag. Optional, if no tag set, all keys for the retention period are returned
@@ -335,6 +335,43 @@ zipped export.bin and export.sig of all keys in that interval
     This request returns \textbf{ application/octet-stream }. This represents zipped export.bin and export.sig of all keys in that interval
 .
 
+\subsubsection{ 500 Internal Server Error }
+Invalid \emph{lastKeyBundleTag}
+ 
+
+
+\section{ /v2/gaen/exposed/raw }
+    \begin{verbatim}
+    get /v2/gaen/exposed/raw
+    \end{verbatim}
+Requests keys published \emph{after} lastKeyBundleTag. The response includes also international keys if includeAllInternationalKeys is set to true. (default is false)
+
+
+\subsection{ Query Parameters }
+\begin{ubparam}{\textwidth}{|H|c|Y|}
+\ubheader{Field} & \ubheader{Type} & \ubheader{Description}\\
+\hline
+\ubheader{ countries }   &  string[]  & List of countries of interest of requested keys. (iso-3166-1 alpha-2).
+ \\
+\hline
+\ubheader{ lastKeyBundleTag }   &  integer  & Only retrieve keys published after the specified key-bundle tag. Optional, if no tag set, all keys for the retention period are returned
+ \\
+\hline
+\end{ubparam}
+\subsection{Responses}
+\subsubsection{ 200 Success }
+List of all keys in that interval for the given countries of interest
+ 
+
+    
+        \begin{ubresponses}{\textwidth}{|Y|}
+        \ubheader{Type}\\
+        \hline
+             \hyperref[sec:array[]] { array[] } \\
+ \hline
+
+        \end{ubresponses}
+    
 \subsubsection{ 500 Internal Server Error }
 Invalid \emph{lastKeyBundleTag}
  
@@ -394,6 +431,9 @@ Between 14 and 30 Temporary Exposure Keys\item zero or more of them might be fak
 \end{itemize} &  \seqsplit{} \\
 \hline
  \ubheader{ delayedKeyDate }  \textcolor{red}{\emph{*}}  & \hyperref[sec:integer]{ integer }   & Prior to version 1.5 Exposure Keys for the day of report weren't available (since they were still used throughout this day RPI=144), so the submission of the last key had to be delayed. This Unix timestamp in milliseconds specifies, which key date the last key (which will be submitted on the next day) will have. The backend then issues a JWT to allow the submission of this last key with specified key date. This should not be necessary after the Exposure Framework is able to send and handle keys with RollingPeriod < 144 (e.g. only valid until submission).
+ &  \seqsplit{} \\
+\hline
+ \ubheader{ countries }  & \hyperref[sec:string]{ string[] }   & List of countries of interest.
  &  \seqsplit{} \\
 \hline
 
