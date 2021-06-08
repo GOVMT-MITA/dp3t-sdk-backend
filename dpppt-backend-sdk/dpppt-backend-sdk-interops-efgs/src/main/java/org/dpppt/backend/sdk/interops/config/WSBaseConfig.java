@@ -258,7 +258,7 @@ public abstract class WSBaseConfig implements SchedulingConfigurer, WebMvcConfig
         }
         final SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(
             sslContext,
-            new String[] { "TLSv1.3" },
+            new String[] { "TLSv1.2", "TLSv1.3" },
             null,
             SSLConnectionSocketFactory.getDefaultHostnameVerifier());
         final Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
